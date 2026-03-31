@@ -2,6 +2,8 @@ package org.griffins1884.sim3d;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -50,6 +52,8 @@ class TerrainAwareSwerveSimulationTest {
     assertEquals(0.42, state.pose3d().getZ(), 1e-9);
     assertEquals(0.8, state.imuSample().yawRateRadPerSec(), 1e-9);
     assertEquals(-0.07, state.terrainSample().pitchRadians(), 1e-9);
+    assertNull(state.terrainContactSample());
+    assertNull(state.tractionState());
   }
 
   @Test
@@ -103,6 +107,38 @@ class TerrainAwareSwerveSimulationTest {
     assertEquals(0.0, resetState.fieldRelativeLinearAccelerationMetersPerSecSq().getZ(), 1e-9);
   }
 
+  @Test
+  void exposesContactAndTractionStateWhenConfigured() {
+    FakeBackend backend =
+        new FakeBackend(
+            new Pose2d(4.6, 5.55, new Rotation2d()),
+            new ChassisSpeeds(0.5, 0.0, 0.2),
+            new ChassisSpeeds(0.5, 0.0, 0.2));
+    AtomicReference<Double> timeSec = new AtomicReference<>(0.0);
+    FakeTerrainContactModel terrainContactModel = new FakeTerrainContactModel();
+
+    TerrainAwareSwerveSimulation simulation =
+        new TerrainAwareSwerveSimulation(
+            backend,
+            terrainContactModel,
+            new ChassisFootprint(0.9, 0.9, 0.5, 0.08),
+            new ChassisMassProperties(48.0, 0.30, 0.70, 0.60, 1.1),
+            timeSec::get);
+
+    DriveSimulationState state = simulation.getState();
+
+    assertNotNull(state.terrainContactSample());
+    assertNotNull(state.tractionState());
+    assertEquals(TerrainFeature.BLUE_LEFT_BUMP, state.terrainContactSample().feature());
+    assertEquals(
+        state.tractionState().totalNormalForceNewtons(),
+        state.tractionState().frontLeft().normalForceNewtons()
+            + state.tractionState().frontRight().normalForceNewtons()
+            + state.tractionState().rearLeft().normalForceNewtons()
+            + state.tractionState().rearRight().normalForceNewtons(),
+        1e-6);
+  }
+
   private static final class FakeBackend implements SwerveDriveBackend {
     private Pose2d pose;
     private ChassisSpeeds robotRelativeSpeeds;
@@ -149,6 +185,33 @@ class TerrainAwareSwerveSimulationTest {
     @Override
     public SwerveModuleSimulation[] getModuleSimulations() {
       return new SwerveModuleSimulation[0];
+    }
+  }
+
+  private static final class FakeTerrainContactModel implements TerrainContactModel {
+    @Override
+    public TerrainSample sample(Pose2d robotPose) {
+      return new TerrainSample(
+          new Pose3d(
+              robotPose.getX(),
+              robotPose.getY(),
+              0.1,
+              new Rotation3d(0.04, 0.06, robotPose.getRotation().getRadians())),
+          0.04,
+          0.06,
+          0.1);
+    }
+
+    @Override
+    public TerrainContactSample sampleContact(Pose2d robotPose, ChassisFootprint chassisFootprint) {
+      return new TerrainContactSample(
+          sample(robotPose),
+          TerrainFeature.BLUE_LEFT_BUMP,
+          Double.POSITIVE_INFINITY,
+          chassisFootprint.groundClearanceMeters() - 0.1,
+          Double.POSITIVE_INFINITY,
+          true,
+          true);
     }
   }
 }

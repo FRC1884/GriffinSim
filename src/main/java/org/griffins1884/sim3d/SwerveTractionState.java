@@ -1,0 +1,20 @@
+package org.griffins1884.sim3d;
+
+/** Load distribution and traction estimates for a four-module swerve chassis. */
+public record SwerveTractionState(
+    WheelLoadSample frontLeft,
+    WheelLoadSample frontRight,
+    WheelLoadSample rearLeft,
+    WheelLoadSample rearRight,
+    double totalNormalForceNewtons,
+    double averageNormalizedLoad,
+    boolean tractionAvailable) {
+  public WheelLoadSample forCorner(SwerveCorner corner) {
+    return switch (corner) {
+      case FRONT_LEFT -> frontLeft;
+      case FRONT_RIGHT -> frontRight;
+      case REAR_LEFT -> rearLeft;
+      case REAR_RIGHT -> rearRight;
+    };
+  }
+}

@@ -29,6 +29,7 @@ Today this repository contains:
 - the first reusable layer for feeding roll, pitch, height, and IMU state into simulation consumers
 - a first-class 3D chassis snapshot with pose, angular rates, and field-relative linear velocity and acceleration
 - a standalone 2026 rebuilt field contact model with explicit bump surfaces and trench underpass clearance checks
+- a quasi-static swerve load-transfer estimator that converts terrain/contact state into per-wheel normal force and traction capacity estimates
 
 That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](PHASE_PLAN.md).
 

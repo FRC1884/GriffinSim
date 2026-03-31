@@ -20,11 +20,16 @@ import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
 public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapter {
   private final SwerveDriveBackend driveBackend;
   private final TerrainModel terrainModel;
+  private final TerrainContactModel terrainContactModel;
+  private final ChassisFootprint chassisFootprint;
+  private final ChassisMassProperties chassisMassProperties;
   private final DoubleSupplier clockSecondsSupplier;
 
   private double lastSampleTimestampSec = Double.NaN;
   private TerrainSample cachedSample = null;
+  private TerrainContactSample cachedTerrainContactSample = null;
   private ChassisState3d cachedChassisState = null;
+  private SwerveTractionState cachedTractionState = null;
   private double rollRateRadPerSec = 0.0;
   private double pitchRateRadPerSec = 0.0;
 
@@ -34,15 +39,57 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
   }
 
   public TerrainAwareSwerveSimulation(SwerveDriveBackend driveBackend, TerrainModel terrainModel) {
-    this(driveBackend, terrainModel, () -> System.nanoTime() * 1.0e-9);
+    this(driveBackend, terrainModel, null, null, null, () -> System.nanoTime() * 1.0e-9);
+  }
+
+  public TerrainAwareSwerveSimulation(
+      SwerveDriveBackend driveBackend,
+      TerrainContactModel terrainContactModel,
+      ChassisFootprint chassisFootprint,
+      ChassisMassProperties chassisMassProperties) {
+    this(
+        driveBackend,
+        terrainContactModel,
+        terrainContactModel,
+        chassisFootprint,
+        chassisMassProperties,
+        () -> System.nanoTime() * 1.0e-9);
   }
 
   public TerrainAwareSwerveSimulation(
       SwerveDriveBackend driveBackend,
       TerrainModel terrainModel,
       DoubleSupplier clockSecondsSupplier) {
+    this(driveBackend, terrainModel, null, null, null, clockSecondsSupplier);
+  }
+
+  public TerrainAwareSwerveSimulation(
+      SwerveDriveBackend driveBackend,
+      TerrainContactModel terrainContactModel,
+      ChassisFootprint chassisFootprint,
+      ChassisMassProperties chassisMassProperties,
+      DoubleSupplier clockSecondsSupplier) {
+    this(
+        driveBackend,
+        terrainContactModel,
+        terrainContactModel,
+        chassisFootprint,
+        chassisMassProperties,
+        clockSecondsSupplier);
+  }
+
+  private TerrainAwareSwerveSimulation(
+      SwerveDriveBackend driveBackend,
+      TerrainModel terrainModel,
+      TerrainContactModel terrainContactModel,
+      ChassisFootprint chassisFootprint,
+      ChassisMassProperties chassisMassProperties,
+      DoubleSupplier clockSecondsSupplier) {
     this.driveBackend = Objects.requireNonNull(driveBackend);
     this.terrainModel = Objects.requireNonNull(terrainModel);
+    this.terrainContactModel = terrainContactModel;
+    this.chassisFootprint = chassisFootprint;
+    this.chassisMassProperties = chassisMassProperties;
     this.clockSecondsSupplier = Objects.requireNonNull(clockSecondsSupplier);
   }
 
@@ -85,6 +132,18 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
   }
 
   @Override
+  public synchronized TerrainContactSample getTerrainContactSample() {
+    sampleChassisState();
+    return cachedTerrainContactSample;
+  }
+
+  @Override
+  public synchronized SwerveTractionState getTractionState() {
+    sampleChassisState();
+    return cachedTractionState;
+  }
+
+  @Override
   public ChassisSpeeds getRobotRelativeChassisSpeeds() {
     return driveBackend.getRobotRelativeChassisSpeeds();
   }
@@ -108,6 +167,8 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
         getPose2d(),
         chassisState3d.pose(),
         chassisState3d,
+        cachedTerrainContactSample,
+        cachedTractionState,
         getRobotRelativeChassisSpeeds(),
         getFieldRelativeChassisSpeeds(),
         getImuSample(),
@@ -130,7 +191,9 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
   private void invalidateCachedTerrainState() {
     lastSampleTimestampSec = Double.NaN;
     cachedSample = null;
+    cachedTerrainContactSample = null;
     cachedChassisState = null;
+    cachedTractionState = null;
     rollRateRadPerSec = 0.0;
     pitchRateRadPerSec = 0.0;
   }
@@ -146,7 +209,14 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
       return cachedChassisState;
     }
 
-    TerrainSample newSample = terrainModel.sample(getPose2d());
+    TerrainContactSample newTerrainContactSample = null;
+    TerrainSample newSample;
+    if (terrainContactModel != null && chassisFootprint != null) {
+      newTerrainContactSample = terrainContactModel.sampleContact(getPose2d(), chassisFootprint);
+      newSample = newTerrainContactSample.terrainSample();
+    } else {
+      newSample = terrainModel.sample(getPose2d());
+    }
     ChassisSpeeds fieldRelativeChassisSpeeds = getFieldRelativeChassisSpeeds();
     Translation3d previousFieldVelocity =
         cachedChassisState == null
@@ -177,6 +247,7 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
     }
 
     cachedSample = newSample;
+    cachedTerrainContactSample = newTerrainContactSample;
     cachedChassisState =
         new ChassisState3d(
             newSample.pose3d(),
@@ -186,6 +257,11 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
                 rollRateRadPerSec,
                 pitchRateRadPerSec,
                 getRobotRelativeChassisSpeeds().omegaRadiansPerSecond));
+    cachedTractionState =
+        cachedTerrainContactSample != null && chassisMassProperties != null
+            ? SwerveLoadTransferEstimator.estimate(
+                cachedChassisState, cachedTerrainContactSample, chassisMassProperties)
+            : null;
     lastSampleTimestampSec = now;
     return cachedChassisState;
   }

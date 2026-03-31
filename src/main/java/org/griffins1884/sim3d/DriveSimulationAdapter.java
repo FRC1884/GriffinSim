@@ -17,6 +17,10 @@ public interface DriveSimulationAdapter {
 
   ChassisState3d getChassisState3d();
 
+  TerrainContactSample getTerrainContactSample();
+
+  SwerveTractionState getTractionState();
+
   ChassisSpeeds getRobotRelativeChassisSpeeds();
 
   ChassisSpeeds getFieldRelativeChassisSpeeds();

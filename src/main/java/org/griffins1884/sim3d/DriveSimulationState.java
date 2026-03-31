@@ -9,6 +9,8 @@ public record DriveSimulationState(
     Pose2d pose2d,
     Pose3d pose3d,
     ChassisState3d chassisState3d,
+    TerrainContactSample terrainContactSample,
+    SwerveTractionState tractionState,
     ChassisSpeeds robotRelativeChassisSpeeds,
     ChassisSpeeds fieldRelativeChassisSpeeds,
     SimImuSample imuSample,
