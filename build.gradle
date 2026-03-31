@@ -1,0 +1,35 @@
+plugins {
+    id "java-library"
+}
+
+group = "org.griffins1884"
+version = "0.1.0-SNAPSHOT"
+description = "Standalone 3D-oriented simulation library for FRC robot projects."
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        name = "frcHome"
+        def frcYear = "2026"
+        def wpilibHome = new File(System.getProperty("user.home"), "wpilib/" + frcYear + "/maven")
+        url = wpilibHome.toURI()
+    }
+    maven {
+        name = "mapleSim"
+        url = uri("https://shenzhen-robotics-alliance.github.io/maple-sim/vendordep/repos/releases")
+    }
+}
+
+dependencies {
+    api "edu.wpi.first.wpimath:wpimath-java:2026.2.1"
+    api "org.ironmaple:maplesim-java:0.3.14"
+    api "org.dyn4j:dyn4j:5.0.2"
+    compileOnly "com.fasterxml.jackson.core:jackson-annotations:2.18.4"
+}
