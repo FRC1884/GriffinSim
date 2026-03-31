@@ -18,7 +18,11 @@ class Rebuilt2026FieldContactModelTest {
 
   @Test
   void detectsBlueLeftBumpAndProducesPositiveTerrainHeight() {
-    Pose2d robotPose = new Pose2d(4.604766, 5.5453534, new Rotation2d());
+    Pose2d robotPose =
+        new Pose2d(
+            Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
+            5.525,
+            new Rotation2d());
 
     TerrainContactSample sample =
         MODEL.sampleContact(robotPose, new ChassisFootprint(0.9, 0.9, 0.6, 0.08));
@@ -31,32 +35,41 @@ class Rebuilt2026FieldContactModelTest {
 
   @Test
   void detectsTrenchUnderpassAndChecksOverheadClearance() {
-    Translation2d blueLeftTrenchCenter =
+    Translation2d blueTrenchCenter =
         new Translation2d(
-            4.604766, Rebuilt2026FieldContactModel.fieldWidthMeters() - Units.inchesToMeters(25.17));
+            Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
+            0.8);
 
     TerrainContactSample shortRobot =
         MODEL.sampleContact(
-            new Pose2d(blueLeftTrenchCenter, Rotation2d.fromDegrees(90.0)),
+            new Pose2d(blueTrenchCenter, Rotation2d.fromDegrees(90.0)),
             new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
     TerrainContactSample tallRobot =
         MODEL.sampleContact(
-            new Pose2d(blueLeftTrenchCenter, Rotation2d.fromDegrees(90.0)),
+            new Pose2d(blueTrenchCenter, Rotation2d.fromDegrees(90.0)),
             new ChassisFootprint(0.9, 0.9, 0.7, 0.08));
 
-    assertEquals(TerrainFeature.BLUE_LEFT_TRENCH, shortRobot.feature());
+    assertEquals(TerrainFeature.BLUE_RIGHT_TRENCH, shortRobot.feature());
     assertTrue(shortRobot.clearanceSatisfied());
     assertTrue(shortRobot.overheadClearanceMeters() < Double.POSITIVE_INFINITY);
 
-    assertEquals(TerrainFeature.BLUE_LEFT_TRENCH, tallRobot.feature());
+    assertEquals(TerrainFeature.BLUE_RIGHT_TRENCH, tallRobot.feature());
     assertFalse(tallRobot.clearanceSatisfied());
     assertTrue(tallRobot.overheadClearanceMarginMeters() < 0.0);
   }
 
   @Test
   void mirrorsBumpAndTrenchFeaturesOnRedSide() {
-    Pose2d redRightBumpPose = new Pose2d(11.8947438, 2.4973534, new Rotation2d());
-    Pose2d redRightTrenchPose = new Pose2d(11.8947438, Units.inchesToMeters(25.17), new Rotation2d());
+    Pose2d redRightBumpPose =
+        new Pose2d(
+            Rebuilt2026FieldContactModel.hubCenterXRedMeters(),
+            2.518,
+            new Rotation2d());
+    Pose2d redRightTrenchPose =
+        new Pose2d(
+            Rebuilt2026FieldContactModel.hubCenterXRedMeters(),
+            0.8,
+            new Rotation2d());
 
     TerrainContactSample bumpSample =
         MODEL.sampleContact(redRightBumpPose, new ChassisFootprint(0.9, 0.9, 0.6, 0.08));
@@ -90,7 +103,7 @@ class Rebuilt2026FieldContactModelTest {
         MODEL.sampleContact(
             new Pose2d(
                 Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
-                Rebuilt2026FieldContactModel.fieldWidthMeters() - Units.inchesToMeters(57.0),
+                Rebuilt2026FieldContactModel.fieldWidthMeters() - Units.inchesToMeters(1.0),
                 new Rotation2d()),
             new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
 
@@ -105,5 +118,19 @@ class Rebuilt2026FieldContactModelTest {
     assertEquals(TerrainFeature.BLUE_LEFT_TRENCH_EDGE, trenchEdgeSample.feature());
     assertFalse(trenchEdgeSample.traversableSurface());
     assertFalse(trenchEdgeSample.clearanceSatisfied());
+  }
+
+  @Test
+  void bumpHeightChangesAcrossDepthNotAlongSpan() {
+    double bumpCenterY = 5.525;
+    double entryHeight =
+        MODEL.sample(new Pose2d(4.35, bumpCenterY, new Rotation2d())).heightMeters();
+    double crestHeight =
+        MODEL.sample(new Pose2d(4.86, bumpCenterY, new Rotation2d())).heightMeters();
+    double shiftedSpanHeight =
+        MODEL.sample(new Pose2d(4.86, 6.3, new Rotation2d())).heightMeters();
+
+    assertTrue(entryHeight < crestHeight);
+    assertEquals(crestHeight, shiftedSpanHeight, 1e-6);
   }
 }

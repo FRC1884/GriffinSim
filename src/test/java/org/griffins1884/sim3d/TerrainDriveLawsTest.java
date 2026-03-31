@@ -61,4 +61,50 @@ class TerrainDriveLawsTest {
     assertTrue(frontLeftScale > frontRightScale);
     assertTrue(frontRightScale > 0.0);
   }
+
+  @Test
+  void slopeReducesAuthorityOnTraversableTerrain() {
+    SwerveTractionState tractionState =
+        new SwerveTractionState(
+            new WheelLoadSample(100.0, 100.0, 1.0),
+            new WheelLoadSample(100.0, 100.0, 1.0),
+            new WheelLoadSample(100.0, 100.0, 1.0),
+            new WheelLoadSample(100.0, 100.0, 1.0),
+            400.0,
+            1.0,
+            true);
+
+    TerrainContactSample flatContact =
+        new TerrainContactSample(
+            new TerrainSample(new Pose3d(), 0.0, 0.0, 0.0),
+            TerrainFeature.FLAT,
+            Double.POSITIVE_INFINITY,
+            0.1,
+            0.1,
+            true,
+            true);
+    TerrainContactSample slopedContact =
+        new TerrainContactSample(
+            new TerrainSample(new Pose3d(0.0, 0.0, 0.1, new Rotation3d(0.0, 0.28, 0.0)), 0.0, 0.28, 0.1),
+            TerrainFeature.BLUE_LEFT_BUMP,
+            Double.POSITIVE_INFINITY,
+            0.1,
+            0.1,
+            true,
+            true);
+
+    double flatDrive =
+        TerrainDriveLaws.driveAuthorityScale(tractionState, SwerveCorner.FRONT_LEFT, flatContact);
+    double slopedDrive =
+        TerrainDriveLaws.driveAuthorityScale(
+            tractionState, SwerveCorner.FRONT_LEFT, slopedContact);
+    double flatSteer =
+        TerrainDriveLaws.steerAuthorityScale(tractionState, SwerveCorner.FRONT_LEFT, flatContact);
+    double slopedSteer =
+        TerrainDriveLaws.steerAuthorityScale(
+            tractionState, SwerveCorner.FRONT_LEFT, slopedContact);
+
+    assertTrue(slopedDrive < flatDrive);
+    assertTrue(slopedSteer < flatSteer);
+  }
 }

@@ -7,7 +7,7 @@ public final class TerrainDriveLaws {
   public static double driveAuthorityScale(
       SwerveTractionState tractionState, SwerveCorner corner, TerrainContactSample contactSample) {
     if (tractionState == null || corner == null) {
-      return 1.0;
+      return contactSample == null ? 1.0 : slopeDriveScale(contactSample);
     }
 
     double normalizedLoad = clamp(tractionState.forCorner(corner).normalizedLoad(), 0.55, 1.35);
@@ -21,7 +21,7 @@ public final class TerrainDriveLaws {
     if (!contactSample.clearanceSatisfied()) {
       driveScale *= 0.2;
     }
-    return driveScale;
+    return driveScale * slopeDriveScale(contactSample);
   }
 
   public static double steerAuthorityScale(
@@ -41,7 +41,36 @@ public final class TerrainDriveLaws {
     if (!contactSample.clearanceSatisfied()) {
       steerScale *= 0.35;
     }
-    return steerScale;
+    return steerScale * slopeSteerScale(contactSample);
+  }
+
+  private static double slopeDriveScale(TerrainContactSample contactSample) {
+    if (contactSample == null) {
+      return 1.0;
+    }
+    double effectiveSlopeRadians = effectiveSlopeRadians(contactSample.terrainSample());
+    double scale =
+        Math.cos(effectiveSlopeRadians) - (0.35 * Math.sin(effectiveSlopeRadians));
+    return clamp(scale, 0.55, 1.0);
+  }
+
+  private static double slopeSteerScale(TerrainContactSample contactSample) {
+    if (contactSample == null) {
+      return 1.0;
+    }
+    double effectiveSlopeRadians = effectiveSlopeRadians(contactSample.terrainSample());
+    double scale =
+        Math.cos(effectiveSlopeRadians) - (0.15 * Math.sin(effectiveSlopeRadians));
+    return clamp(scale, 0.7, 1.0);
+  }
+
+  private static double effectiveSlopeRadians(TerrainSample terrainSample) {
+    if (terrainSample == null) {
+      return 0.0;
+    }
+    double slopeTan =
+        Math.hypot(Math.tan(terrainSample.rollRadians()), Math.tan(terrainSample.pitchRadians()));
+    return Math.atan(slopeTan);
   }
 
   private static double clamp(double value, double min, double max) {
