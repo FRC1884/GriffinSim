@@ -24,8 +24,9 @@ This repository is kept separate from robot code on purpose:
 
 Today this repository contains:
 - a terrain-aware wrapper around Maple's `SwerveDriveSimulation`
-- shared `TerrainModel` and `TerrainSample` contracts
-- the first reusable layer for feeding roll, pitch, and height into simulation consumers
+- backend abstractions that separate the public simulator API from Maple-specific types
+- shared `TerrainModel`, `TerrainSample`, `DriveSimulationState`, and `SimImuSample` contracts
+- the first reusable layer for feeding roll, pitch, height, and IMU state into simulation consumers
 
 That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](PHASE_PLAN.md).
 
