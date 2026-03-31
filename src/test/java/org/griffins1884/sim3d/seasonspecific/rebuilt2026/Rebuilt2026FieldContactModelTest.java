@@ -37,8 +37,8 @@ class Rebuilt2026FieldContactModelTest {
   void detectsTrenchUnderpassAndChecksOverheadClearance() {
     Translation2d blueTrenchCenter =
         new Translation2d(
-            Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
-            0.8);
+            4.01,
+            2.0);
 
     TerrainContactSample shortRobot =
         MODEL.sampleContact(
@@ -67,8 +67,8 @@ class Rebuilt2026FieldContactModelTest {
             new Rotation2d());
     Pose2d redRightTrenchPose =
         new Pose2d(
-            Rebuilt2026FieldContactModel.hubCenterXRedMeters(),
-            0.8,
+            11.30,
+            2.0,
             new Rotation2d());
 
     TerrainContactSample bumpSample =
@@ -124,11 +124,21 @@ class Rebuilt2026FieldContactModelTest {
   void bumpHeightChangesAcrossDepthNotAlongSpan() {
     double bumpCenterY = 5.525;
     double entryHeight =
-        MODEL.sample(new Pose2d(4.35, bumpCenterY, new Rotation2d())).heightMeters();
+        MODEL.sample(new Pose2d(4.12, bumpCenterY, new Rotation2d())).heightMeters();
     double crestHeight =
-        MODEL.sample(new Pose2d(4.86, bumpCenterY, new Rotation2d())).heightMeters();
+        MODEL.sample(
+                new Pose2d(
+                    Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
+                    bumpCenterY,
+                    new Rotation2d()))
+            .heightMeters();
     double shiftedSpanHeight =
-        MODEL.sample(new Pose2d(4.86, 6.3, new Rotation2d())).heightMeters();
+        MODEL.sample(
+                new Pose2d(
+                    Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
+                    6.3,
+                    new Rotation2d()))
+            .heightMeters();
 
     assertTrue(entryHeight < crestHeight);
     assertEquals(crestHeight, shiftedSpanHeight, 1e-6);

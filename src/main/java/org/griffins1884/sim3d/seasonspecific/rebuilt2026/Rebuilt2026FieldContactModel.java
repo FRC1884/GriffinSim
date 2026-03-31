@@ -27,10 +27,8 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
 
   private static final double FIELD_LENGTH_METERS = 16.518;
   private static final double FIELD_WIDTH_METERS = 8.043;
-  private static final double CAD_PERIMETER_MIN_X_MM = -8868.1;
-  private static final double CAD_PERIMETER_MAX_X_MM = 8868.1;
-  private static final double CAD_PERIMETER_MIN_Y_MM = -4371.7;
-  private static final double CAD_PERIMETER_MAX_Y_MM = 4371.7;
+  private static final double CAD_FIELD_ORIGIN_X_METERS = 8.2497799;
+  private static final double CAD_FIELD_ORIGIN_Y_METERS = 4.0213534;
 
   private static final RectRegion BLUE_HUB_BOUNDS = cadRect(-4235.8, -3054.0, -590.9, 590.9);
   private static final RectRegion RED_HUB_BOUNDS = cadRect(3054.0, 4235.8, -590.9, 590.9);
@@ -43,6 +41,18 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
 
   private static final RectRegion BLUE_TRENCH_BOUNDS = cadRect(-4241.8, -3048.0, -4117.2, 4254.5);
   private static final RectRegion RED_TRENCH_BOUNDS = cadRect(3048.0, 4241.8, -4117.2, 4254.5);
+  private static final RectRegion BLUE_LEFT_TRENCH_BLOCK_BOUNDS =
+      cadRect(-4241.8, -3048.0, 2451.1, 4254.5);
+  private static final RectRegion BLUE_RIGHT_TRENCH_BLOCK_BOUNDS =
+      cadRect(-4241.8, -3048.0, -4117.2, -2451.1);
+  private static final RectRegion RED_LEFT_TRENCH_BLOCK_BOUNDS =
+      cadRect(3048.0, 4241.8, 2451.1, 4254.5);
+  private static final RectRegion RED_RIGHT_TRENCH_BLOCK_BOUNDS =
+      cadRect(3048.0, 4241.8, -4117.2, -2451.1);
+  private static final RectRegion BLUE_TRENCH_OPEN_BOUNDS =
+      cadRect(-4241.8, -3048.0, -2451.1, 2451.1);
+  private static final RectRegion RED_TRENCH_OPEN_BOUNDS =
+      cadRect(3048.0, 4241.8, -2451.1, 2451.1);
 
   private static final double BUMP_HEIGHT_METERS = Units.inchesToMeters(6.513);
   private static final double BUMP_RAMP_FRACTION = 0.34;
@@ -82,7 +92,7 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     double forwardSlope = (gradient[0] * Math.cos(yaw)) + (gradient[1] * Math.sin(yaw));
     double rightSlope = (-gradient[0] * Math.sin(yaw)) + (gradient[1] * Math.cos(yaw));
 
-    double pitch = Math.atan(forwardSlope);
+    double pitch = -Math.atan(forwardSlope);
     double roll = -Math.atan(rightSlope);
     Pose3d pose3d =
         new Pose3d(robotPose.getX(), robotPose.getY(), z, new Rotation3d(roll, pitch, yaw));
@@ -136,16 +146,16 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     if (inRedTower(position)) {
       return TerrainFeature.RED_TOWER;
     }
-    if (contains(trenchEdgeBoundsBlueLeft(), position)) {
+    if (contains(BLUE_LEFT_TRENCH_BLOCK_BOUNDS, position)) {
       return TerrainFeature.BLUE_LEFT_TRENCH_EDGE;
     }
-    if (contains(trenchEdgeBoundsBlueRight(), position)) {
+    if (contains(BLUE_RIGHT_TRENCH_BLOCK_BOUNDS, position)) {
       return TerrainFeature.BLUE_RIGHT_TRENCH_EDGE;
     }
-    if (contains(trenchEdgeBoundsRedLeft(), position)) {
+    if (contains(RED_LEFT_TRENCH_BLOCK_BOUNDS, position)) {
       return TerrainFeature.RED_LEFT_TRENCH_EDGE;
     }
-    if (contains(trenchEdgeBoundsRedRight(), position)) {
+    if (contains(RED_RIGHT_TRENCH_BLOCK_BOUNDS, position)) {
       return TerrainFeature.RED_RIGHT_TRENCH_EDGE;
     }
     if (contains(BLUE_LEFT_BUMP_BOUNDS, position)) {
@@ -160,12 +170,12 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     if (contains(RED_RIGHT_BUMP_BOUNDS, position)) {
       return TerrainFeature.RED_RIGHT_BUMP;
     }
-    if (contains(BLUE_TRENCH_BOUNDS, position)) {
+    if (contains(BLUE_TRENCH_OPEN_BOUNDS, position)) {
       return position.getY() >= hubCenterYMeters()
           ? TerrainFeature.BLUE_LEFT_TRENCH
           : TerrainFeature.BLUE_RIGHT_TRENCH;
     }
-    if (contains(RED_TRENCH_BOUNDS, position)) {
+    if (contains(RED_TRENCH_OPEN_BOUNDS, position)) {
       return position.getY() >= hubCenterYMeters()
           ? TerrainFeature.RED_LEFT_TRENCH
           : TerrainFeature.RED_RIGHT_TRENCH;
@@ -250,38 +260,6 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
 
   private static double hubCenterXRed() {
     return RED_HUB_BOUNDS.centerX();
-  }
-
-  private static RectRegion trenchEdgeBoundsBlueLeft() {
-    return new RectRegion(
-        BLUE_TRENCH_BOUNDS.minX,
-        BLUE_TRENCH_BOUNDS.maxX,
-        FIELD_WIDTH_METERS - TRENCH_EDGE_WALL_WIDTH_METERS,
-        FIELD_WIDTH_METERS);
-  }
-
-  private static RectRegion trenchEdgeBoundsBlueRight() {
-    return new RectRegion(
-        BLUE_TRENCH_BOUNDS.minX,
-        BLUE_TRENCH_BOUNDS.maxX,
-        0.0,
-        TRENCH_EDGE_WALL_WIDTH_METERS);
-  }
-
-  private static RectRegion trenchEdgeBoundsRedLeft() {
-    return new RectRegion(
-        RED_TRENCH_BOUNDS.minX,
-        RED_TRENCH_BOUNDS.maxX,
-        FIELD_WIDTH_METERS - TRENCH_EDGE_WALL_WIDTH_METERS,
-        FIELD_WIDTH_METERS);
-  }
-
-  private static RectRegion trenchEdgeBoundsRedRight() {
-    return new RectRegion(
-        RED_TRENCH_BOUNDS.minX,
-        RED_TRENCH_BOUNDS.maxX,
-        0.0,
-        TRENCH_EDGE_WALL_WIDTH_METERS);
   }
 
   private static boolean inBlueTower(Translation2d position) {
@@ -418,6 +396,30 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     return BLUE_TRENCH_BOUNDS.maxX - BLUE_TRENCH_BOUNDS.minX;
   }
 
+  public static double blueLeftTrenchBlockCenterYMeters() {
+    return BLUE_LEFT_TRENCH_BLOCK_BOUNDS.centerY();
+  }
+
+  public static double blueRightTrenchBlockCenterYMeters() {
+    return BLUE_RIGHT_TRENCH_BLOCK_BOUNDS.centerY();
+  }
+
+  public static double redLeftTrenchBlockCenterYMeters() {
+    return RED_LEFT_TRENCH_BLOCK_BOUNDS.centerY();
+  }
+
+  public static double redRightTrenchBlockCenterYMeters() {
+    return RED_RIGHT_TRENCH_BLOCK_BOUNDS.centerY();
+  }
+
+  public static double leftTrenchBlockWidthMeters() {
+    return BLUE_LEFT_TRENCH_BLOCK_BOUNDS.maxY - BLUE_LEFT_TRENCH_BLOCK_BOUNDS.minY;
+  }
+
+  public static double rightTrenchBlockWidthMeters() {
+    return BLUE_RIGHT_TRENCH_BLOCK_BOUNDS.maxY - BLUE_RIGHT_TRENCH_BLOCK_BOUNDS.minY;
+  }
+
   private static void addHubMarkers(List<FieldMarkerSample> markers) {
     addMarker(markers, "blue-hub", BLUE_HUB_BOUNDS.center3d(BUMP_HEIGHT_METERS * 0.5));
     addMarker(markers, "red-hub", RED_HUB_BOUNDS.center3d(BUMP_HEIGHT_METERS * 0.5));
@@ -435,50 +437,38 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     addMarker(
         markers,
         "blue-left-trench-open",
-        new Translation3d(
-            BLUE_TRENCH_BOUNDS.centerX(),
-            BLUE_TRENCH_BOUNDS.centerY() + (FIELD_WIDTH_METERS * 0.2),
-            TRENCH_OPENING_HEIGHT_METERS));
+        BLUE_TRENCH_OPEN_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS));
     addMarker(
         markers,
         "blue-right-trench-open",
-        new Translation3d(
-            BLUE_TRENCH_BOUNDS.centerX(),
-            BLUE_TRENCH_BOUNDS.centerY() - (FIELD_WIDTH_METERS * 0.2),
-            TRENCH_OPENING_HEIGHT_METERS));
+        BLUE_TRENCH_OPEN_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS));
     addMarker(
         markers,
         "red-left-trench-open",
-        new Translation3d(
-            RED_TRENCH_BOUNDS.centerX(),
-            RED_TRENCH_BOUNDS.centerY() + (FIELD_WIDTH_METERS * 0.2),
-            TRENCH_OPENING_HEIGHT_METERS));
+        RED_TRENCH_OPEN_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS));
     addMarker(
         markers,
         "red-right-trench-open",
-        new Translation3d(
-            RED_TRENCH_BOUNDS.centerX(),
-            RED_TRENCH_BOUNDS.centerY() - (FIELD_WIDTH_METERS * 0.2),
-            TRENCH_OPENING_HEIGHT_METERS));
+        RED_TRENCH_OPEN_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS));
   }
 
   private static void addTrenchEdgeMarkers(List<FieldMarkerSample> markers) {
     addMarker(
         markers,
         "blue-left-trench-edge",
-        trenchEdgeBoundsBlueLeft().center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
+        BLUE_LEFT_TRENCH_BLOCK_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
     addMarker(
         markers,
         "blue-right-trench-edge",
-        trenchEdgeBoundsBlueRight().center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
+        BLUE_RIGHT_TRENCH_BLOCK_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
     addMarker(
         markers,
         "red-left-trench-edge",
-        trenchEdgeBoundsRedLeft().center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
+        RED_LEFT_TRENCH_BLOCK_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
     addMarker(
         markers,
         "red-right-trench-edge",
-        trenchEdgeBoundsRedRight().center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
+        RED_RIGHT_TRENCH_BLOCK_BOUNDS.center3d(TRENCH_OPENING_HEIGHT_METERS * 0.5));
   }
 
   private static void addTowerMarkers(List<FieldMarkerSample> markers) {
@@ -509,23 +499,19 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
   }
 
   private static double cadXToField(double cadXMillimeters) {
-    return normalizedProgress(CAD_PERIMETER_MIN_X_MM, CAD_PERIMETER_MAX_X_MM, cadXMillimeters)
-        * FIELD_LENGTH_METERS;
+    return (cadXMillimeters / 1000.0) + CAD_FIELD_ORIGIN_X_METERS;
   }
 
   private static double cadYToField(double cadYMillimeters) {
-    return normalizedProgress(CAD_PERIMETER_MIN_Y_MM, CAD_PERIMETER_MAX_Y_MM, cadYMillimeters)
-        * FIELD_WIDTH_METERS;
+    return (cadYMillimeters / 1000.0) + CAD_FIELD_ORIGIN_Y_METERS;
   }
 
   private static double cadXSpanToField(double cadSpanMillimeters) {
-    return (cadSpanMillimeters / (CAD_PERIMETER_MAX_X_MM - CAD_PERIMETER_MIN_X_MM))
-        * FIELD_LENGTH_METERS;
+    return cadSpanMillimeters / 1000.0;
   }
 
   private static double cadYSpanToField(double cadSpanMillimeters) {
-    return (cadSpanMillimeters / (CAD_PERIMETER_MAX_Y_MM - CAD_PERIMETER_MIN_Y_MM))
-        * FIELD_WIDTH_METERS;
+    return cadSpanMillimeters / 1000.0;
   }
 
   private record RectRegion(double minX, double maxX, double minY, double maxY) {

@@ -49,10 +49,10 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
         (TOWER_WIDTH_METERS - TOWER_INNER_OPENING_WIDTH_METERS) * 0.5;
     private static final double TRENCH_DEPTH_METERS =
         Rebuilt2026FieldContactModel.trenchDepthMeters();
-    private static final double TRENCH_OPENING_WIDTH_METERS = Inches.of(50.34).in(Meters);
-    private static final double TRENCH_TOTAL_WIDTH_METERS = Inches.of(65.65).in(Meters);
-    private static final double TRENCH_EDGE_WALL_WIDTH_METERS =
-        (TRENCH_TOTAL_WIDTH_METERS - TRENCH_OPENING_WIDTH_METERS) * 0.5;
+    private static final double LEFT_TRENCH_BLOCK_WIDTH_METERS =
+        Rebuilt2026FieldContactModel.leftTrenchBlockWidthMeters();
+    private static final double RIGHT_TRENCH_BLOCK_WIDTH_METERS =
+        Rebuilt2026FieldContactModel.rightTrenchBlockWidthMeters();
 
     RebuiltFieldObstaclesMap(boolean includeTraversalStructures) {
       addFieldBorder();
@@ -96,31 +96,31 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     private void addTrenchEdgeWalls() {
       addRectangularObstacle(
           TRENCH_DEPTH_METERS,
-          TRENCH_EDGE_WALL_WIDTH_METERS,
+          LEFT_TRENCH_BLOCK_WIDTH_METERS,
           new Pose2d(
               Rebuilt2026FieldContactModel.blueTrenchCenterXMeters(),
-              FIELD_Y_MAX - TRENCH_OPENING_WIDTH_METERS - (TRENCH_EDGE_WALL_WIDTH_METERS * 0.5),
+              Rebuilt2026FieldContactModel.blueLeftTrenchBlockCenterYMeters(),
               new Rotation2d()));
       addRectangularObstacle(
           TRENCH_DEPTH_METERS,
-          TRENCH_EDGE_WALL_WIDTH_METERS,
+          RIGHT_TRENCH_BLOCK_WIDTH_METERS,
           new Pose2d(
               Rebuilt2026FieldContactModel.blueTrenchCenterXMeters(),
-              TRENCH_OPENING_WIDTH_METERS + (TRENCH_EDGE_WALL_WIDTH_METERS * 0.5),
+              Rebuilt2026FieldContactModel.blueRightTrenchBlockCenterYMeters(),
               new Rotation2d()));
       addRectangularObstacle(
           TRENCH_DEPTH_METERS,
-          TRENCH_EDGE_WALL_WIDTH_METERS,
+          LEFT_TRENCH_BLOCK_WIDTH_METERS,
           new Pose2d(
               Rebuilt2026FieldContactModel.redTrenchCenterXMeters(),
-              FIELD_Y_MAX - TRENCH_OPENING_WIDTH_METERS - (TRENCH_EDGE_WALL_WIDTH_METERS * 0.5),
+              Rebuilt2026FieldContactModel.redLeftTrenchBlockCenterYMeters(),
               new Rotation2d()));
       addRectangularObstacle(
           TRENCH_DEPTH_METERS,
-          TRENCH_EDGE_WALL_WIDTH_METERS,
+          RIGHT_TRENCH_BLOCK_WIDTH_METERS,
           new Pose2d(
               Rebuilt2026FieldContactModel.redTrenchCenterXMeters(),
-              TRENCH_OPENING_WIDTH_METERS + (TRENCH_EDGE_WALL_WIDTH_METERS * 0.5),
+              Rebuilt2026FieldContactModel.redRightTrenchBlockCenterYMeters(),
               new Rotation2d()));
     }
 
