@@ -1,0 +1,202 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.griffins1884",
+    "module": "GriffinSim",
+    "version": "0.1.6",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.11"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "edu.wpi.first.wpimath",
+          "module": "wpimath-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiutil",
+          "module": "wpiutil-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiunits",
+          "module": "wpiunits-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.ntcore",
+          "module": "ntcore-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "us.hebi.quickbuf",
+          "module": "quickbuf-runtime",
+          "version": {
+            "requires": "1.4"
+          }
+        },
+        {
+          "group": "org.ironmaple",
+          "module": "maplesim-java",
+          "version": {
+            "requires": "0.3.14"
+          }
+        },
+        {
+          "group": "org.dyn4j",
+          "module": "dyn4j",
+          "version": {
+            "requires": "5.0.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "GriffinSim-0.1.6.jar",
+          "url": "GriffinSim-0.1.6.jar",
+          "size": 49673,
+          "sha512": "447888b24d8d77249c5a4dcba1b4a5531f167271f3c28b9100f0b2e9f2874397c3a7aa688495d72be187fb2d78f999cade9d79e7d9a7d12599b65416a402bbc6",
+          "sha256": "3937c8b6ede37b617b8ac674c8630d46f2847ce796049b9683c8b55987b64390",
+          "sha1": "a7be947e02792fed93c845d96e4a607808702622",
+          "md5": "4fdfc4a0ff2e8c812bf9826122b38ccd"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "edu.wpi.first.wpimath",
+          "module": "wpimath-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiutil",
+          "module": "wpiutil-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiunits",
+          "module": "wpiunits-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "edu.wpi.first.ntcore",
+          "module": "ntcore-java",
+          "version": {
+            "requires": "2026.2.1"
+          }
+        },
+        {
+          "group": "us.hebi.quickbuf",
+          "module": "quickbuf-runtime",
+          "version": {
+            "requires": "1.4"
+          }
+        },
+        {
+          "group": "org.ironmaple",
+          "module": "maplesim-java",
+          "version": {
+            "requires": "0.3.14"
+          }
+        },
+        {
+          "group": "org.dyn4j",
+          "module": "dyn4j",
+          "version": {
+            "requires": "5.0.2"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "GriffinSim-0.1.6.jar",
+          "url": "GriffinSim-0.1.6.jar",
+          "size": 49673,
+          "sha512": "447888b24d8d77249c5a4dcba1b4a5531f167271f3c28b9100f0b2e9f2874397c3a7aa688495d72be187fb2d78f999cade9d79e7d9a7d12599b65416a402bbc6",
+          "sha256": "3937c8b6ede37b617b8ac674c8630d46f2847ce796049b9683c8b55987b64390",
+          "sha1": "a7be947e02792fed93c845d96e4a607808702622",
+          "md5": "4fdfc4a0ff2e8c812bf9826122b38ccd"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "GriffinSim-0.1.6-sources.jar",
+          "url": "GriffinSim-0.1.6-sources.jar",
+          "size": 23606,
+          "sha512": "c72532408aceab2e34ebcbe2fe3c196633eb28798b453c09873861bbfe535bcd8ab3ad01a53f9ab9ec6ea7ce697dd6eca88df3aaff546568b2c9a6de8864137d",
+          "sha256": "0b9ca64015b11c9c5a9f4b344fe93358b17021c05452a3af3986ec2dc6ca91a6",
+          "sha1": "5f71db531f92e8eae40445473a37b1ce4283000c",
+          "md5": "160ac71f2fcd56ca43ea4137bb43d7d7"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "GriffinSim-0.1.6-javadoc.jar",
+          "url": "GriffinSim-0.1.6-javadoc.jar",
+          "size": 210277,
+          "sha512": "a5a565f25653b16cb2c1a93362f034d96834bd6ba793da8bace5819054e9cf37d2e4ed4ef43f895aa3c7ff28f495160aec622c2a300fc1ca6499018b888226e0",
+          "sha256": "3202c917cfda220eed15804a0273b7cad1a9de5611493104ec06c3c82dfac4d3",
+          "sha1": "4ef9037b4cb4b4acfa9e529654266705d5fd720c",
+          "md5": "1b2f2f6a7759e0f2da25128d388b0148"
+        }
+      ]
+    }
+  ]
+}
