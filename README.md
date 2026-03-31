@@ -30,6 +30,7 @@ Today this repository contains:
 - a first-class 3D chassis snapshot with pose, angular rates, and field-relative linear velocity and acceleration
 - a standalone 2026 rebuilt field contact model with explicit bump surfaces and trench underpass clearance checks
 - a quasi-static swerve load-transfer estimator that converts terrain/contact state into per-wheel normal force and traction capacity estimates
+- integration helpers for holonomic autonomous libraries, visualization frames, static field markers, and repeatable 2026 auto scenarios
 
 That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](PHASE_PLAN.md).
 

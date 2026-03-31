@@ -4,12 +4,17 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import java.util.ArrayList;
+import java.util.List;
 import org.griffins1884.sim3d.ChassisFootprint;
 import org.griffins1884.sim3d.TerrainContactModel;
 import org.griffins1884.sim3d.TerrainContactSample;
 import org.griffins1884.sim3d.TerrainFeature;
 import org.griffins1884.sim3d.TerrainSample;
+import org.griffins1884.sim3d.integration.FieldMarkerProvider;
+import org.griffins1884.sim3d.integration.FieldMarkerSample;
 
 /**
  * Standalone 2026 rebuilt field terrain/contact model.
@@ -17,7 +22,7 @@ import org.griffins1884.sim3d.TerrainSample;
  * <p>This encodes the traversable bump surfaces and trench underpass clearance windows as explicit field
  * geometry, without depending on any robot-season repository or deploy assets.
  */
-public final class Rebuilt2026FieldContactModel implements TerrainContactModel {
+public final class Rebuilt2026FieldContactModel implements TerrainContactModel, FieldMarkerProvider {
   private static final double GRADIENT_SAMPLE_METERS = 0.02;
 
   private static final double FIELD_LENGTH_METERS = 16.518;
@@ -35,6 +40,12 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel {
   private static final double TRENCH_DEPTH_X_METERS = Units.inchesToMeters(47.0);
   private static final double TRENCH_OPENING_WIDTH_METERS = Units.inchesToMeters(50.34);
   private static final double TRENCH_OPENING_HEIGHT_METERS = Units.inchesToMeters(22.25);
+  private static final double TOWER_FRONT_FACE_X_METERS = Units.inchesToMeters(53.51);
+  private static final double TOWER_INNER_OPENING_WIDTH_METERS = Units.inchesToMeters(32.250);
+  private static final double TOWER_UPRIGHT_OFFSET_METERS = Units.inchesToMeters(0.75);
+  private static final double TOWER_UPRIGHT_HEIGHT_METERS = Units.inchesToMeters(72.1);
+  private static final double BLUE_TOWER_CENTER_Y_METERS = 3.7301932;
+  private static final double RED_TOWER_CENTER_Y_METERS = 4.3124882;
 
   public static final Rebuilt2026FieldContactModel INSTANCE = new Rebuilt2026FieldContactModel();
 
@@ -78,6 +89,15 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel {
         overheadClearanceMarginMeters,
         traversableSurface,
         clearanceSatisfied);
+  }
+
+  @Override
+  public FieldMarkerSample[] getFieldMarkers() {
+    List<FieldMarkerSample> markers = new ArrayList<>();
+    addBumpMarkers(markers);
+    addTrenchMarkers(markers);
+    addTowerMarkers(markers);
+    return markers.toArray(FieldMarkerSample[]::new);
   }
 
   public TerrainFeature featureAt(Translation2d position) {
@@ -238,5 +258,51 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel {
     return FIELD_WIDTH_METERS;
   }
 
-  private record RectRegion(double minX, double maxX, double minY, double maxY) {}
+  private static void addBumpMarkers(List<FieldMarkerSample> markers) {
+    addMarker(markers, "blue-left-bump", bumpBoundsBlueLeft().center3d(BUMP_HEIGHT_METERS * 0.5));
+    addMarker(markers, "blue-right-bump", bumpBoundsBlueRight().center3d(BUMP_HEIGHT_METERS * 0.5));
+    addMarker(markers, "red-left-bump", bumpBoundsRedLeft().center3d(BUMP_HEIGHT_METERS * 0.5));
+    addMarker(markers, "red-right-bump", bumpBoundsRedRight().center3d(BUMP_HEIGHT_METERS * 0.5));
+  }
+
+  private static void addTrenchMarkers(List<FieldMarkerSample> markers) {
+    addMarker(
+        markers,
+        "blue-left-trench-open",
+        trenchBoundsBlueLeft().center3d(TRENCH_OPENING_HEIGHT_METERS));
+    addMarker(
+        markers,
+        "blue-right-trench-open",
+        trenchBoundsBlueRight().center3d(TRENCH_OPENING_HEIGHT_METERS));
+    addMarker(
+        markers,
+        "red-left-trench-open",
+        trenchBoundsRedLeft().center3d(TRENCH_OPENING_HEIGHT_METERS));
+    addMarker(
+        markers,
+        "red-right-trench-open",
+        trenchBoundsRedRight().center3d(TRENCH_OPENING_HEIGHT_METERS));
+  }
+
+  private static void addTowerMarkers(List<FieldMarkerSample> markers) {
+    double blueLeftUprightY = BLUE_TOWER_CENTER_Y_METERS + TOWER_INNER_OPENING_WIDTH_METERS * 0.5 + TOWER_UPRIGHT_OFFSET_METERS;
+    double blueRightUprightY = BLUE_TOWER_CENTER_Y_METERS - TOWER_INNER_OPENING_WIDTH_METERS * 0.5 - TOWER_UPRIGHT_OFFSET_METERS;
+    double redLeftUprightY = RED_TOWER_CENTER_Y_METERS + TOWER_INNER_OPENING_WIDTH_METERS * 0.5 + TOWER_UPRIGHT_OFFSET_METERS;
+    double redRightUprightY = RED_TOWER_CENTER_Y_METERS - TOWER_INNER_OPENING_WIDTH_METERS * 0.5 - TOWER_UPRIGHT_OFFSET_METERS;
+
+    addMarker(markers, "blue-tower-left-upright", new Translation3d(TOWER_FRONT_FACE_X_METERS, blueLeftUprightY, TOWER_UPRIGHT_HEIGHT_METERS * 0.5));
+    addMarker(markers, "blue-tower-right-upright", new Translation3d(TOWER_FRONT_FACE_X_METERS, blueRightUprightY, TOWER_UPRIGHT_HEIGHT_METERS * 0.5));
+    addMarker(markers, "red-tower-left-upright", new Translation3d(FIELD_LENGTH_METERS - TOWER_FRONT_FACE_X_METERS, redLeftUprightY, TOWER_UPRIGHT_HEIGHT_METERS * 0.5));
+    addMarker(markers, "red-tower-right-upright", new Translation3d(FIELD_LENGTH_METERS - TOWER_FRONT_FACE_X_METERS, redRightUprightY, TOWER_UPRIGHT_HEIGHT_METERS * 0.5));
+  }
+
+  private static void addMarker(List<FieldMarkerSample> markers, String id, Translation3d translation3d) {
+    markers.add(new FieldMarkerSample(id, new Pose3d(translation3d, new Rotation3d())));
+  }
+
+  private record RectRegion(double minX, double maxX, double minY, double maxY) {
+    Translation3d center3d(double z) {
+      return new Translation3d((minX + maxX) * 0.5, (minY + maxY) * 0.5, z);
+    }
+  }
 }
