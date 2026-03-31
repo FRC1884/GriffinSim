@@ -44,6 +44,7 @@ That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](
 
 - Versioning strategy: [VERSIONING.md](VERSIONING.md)
 - Robot-repo consumption guidance: [docs/ROBOT_INTEGRATION.md](docs/ROBOT_INTEGRATION.md)
+- Vendordep file: [vendordeps/GriffinSim.json](vendordeps/GriffinSim.json)
 
 ## Early Integration Goal
 

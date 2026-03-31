@@ -73,3 +73,14 @@ Keep GriffinSim usage limited to:
 - build/test tooling
 
 That separation is the primary reason GriffinSim exists as its own repository.
+
+## Released Vendordep
+
+For season repos that should consume a published GriffinSim build instead of a local checkout:
+
+1. Download `GriffinSim.json` from the GitHub release asset.
+2. Place it in the robot repo's `vendordeps/` directory.
+3. Remove any temporary local `includeBuild("../GriffinSim")` wiring.
+4. Remove any hand-written GriffinSim dependency line that was only there for local development.
+
+The vendordep routes GriffinSim through JitPack and keeps Maple's public Maven repository available for the current backend dependency chain.

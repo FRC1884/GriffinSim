@@ -1,0 +1,22 @@
+{
+  "fileName": "GriffinSim.json",
+  "name": "GriffinSim",
+  "version": "0.1.0",
+  "frcYear": "2026",
+  "uuid": "e6c83fe7-7e05-47a8-acd3-b4b167e6c0f6",
+  "mavenUrls": [
+    "https://jitpack.io",
+    "https://shenzhen-robotics-alliance.github.io/maple-sim/vendordep/repos/releases",
+    "https://repo1.maven.org/maven2"
+  ],
+  "jsonUrl": "https://github.com/FRC1884/GriffinSim/releases/download/v0.1.0/GriffinSim.json",
+  "javaDependencies": [
+    {
+      "groupId": "com.github.FRC1884",
+      "artifactId": "GriffinSim",
+      "version": "v0.1.0"
+    }
+  ],
+  "jniDependencies": [],
+  "cppDependencies": []
+}
