@@ -19,6 +19,10 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven {
+        name = "wpilibRelease"
+        url = uri("https://frcmaven.wpi.edu/artifactory/release/")
+    }
+    maven {
         name = "frcHome"
         def frcYear = "2026"
         def wpilibHome = new File(System.getProperty("user.home"), "wpilib/" + frcYear + "/maven")
