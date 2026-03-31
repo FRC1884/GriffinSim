@@ -83,4 +83,4 @@ For season repos that should consume a published GriffinSim build instead of a l
 3. Remove any temporary local `includeBuild("../GriffinSim")` wiring.
 4. Remove any hand-written GriffinSim dependency line that was only there for local development.
 
-The vendordep routes GriffinSim through JitPack and keeps Maple's public Maven repository available for the current backend dependency chain.
+The vendordep routes GriffinSim through a static Maven repository published from the GriffinSim GitHub repository and keeps the WPILib and Maple public Maven repositories available for the current backend dependency chain.

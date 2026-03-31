@@ -19,14 +19,14 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven {
-        name = "wpilibRelease"
-        url = uri("https://frcmaven.wpi.edu/artifactory/release/")
-    }
-    maven {
         name = "frcHome"
         def frcYear = "2026"
         def wpilibHome = new File(System.getProperty("user.home"), "wpilib/" + frcYear + "/maven")
         url = wpilibHome.toURI()
+    }
+    maven {
+        name = "wpilibRelease"
+        url = uri("https://frcmaven.wpi.edu/artifactory/release/")
     }
     maven {
         name = "mapleSim"
@@ -61,6 +61,12 @@ publishing {
                 name = findProperty("POM_NAME") ?: "GriffinSim"
                 description = project.description
             }
+        }
+    }
+    repositories {
+        maven {
+            name = "githubStatic"
+            url = layout.projectDirectory.dir("maven-repo")
         }
     }
 }
