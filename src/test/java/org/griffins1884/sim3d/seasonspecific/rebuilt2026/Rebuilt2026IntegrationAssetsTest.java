@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import org.griffins1884.sim3d.integration.FieldMarkerSample;
 import org.griffins1884.sim3d.integration.SimulationScenario;
 import org.junit.jupiter.api.Test;
@@ -13,9 +14,11 @@ class Rebuilt2026IntegrationAssetsTest {
   void exposesStaticFieldMarkersForVisualization() {
     FieldMarkerSample[] markers = Rebuilt2026FieldContactModel.INSTANCE.getFieldMarkers();
 
-    assertTrue(markers.length >= 12);
-    assertEquals("blue-left-bump", markers[0].id());
-    assertTrue(markers[0].pose().getZ() > 0.0);
+    assertTrue(markers.length >= 18);
+    assertTrue(Arrays.stream(markers).anyMatch(marker -> marker.id().equals("blue-left-bump")));
+    assertTrue(Arrays.stream(markers).anyMatch(marker -> marker.id().equals("blue-hub")));
+    assertTrue(Arrays.stream(markers).anyMatch(marker -> marker.id().equals("blue-left-trench-edge")));
+    assertTrue(Arrays.stream(markers).allMatch(marker -> marker.pose().getZ() >= 0.0));
   }
 
   @Test

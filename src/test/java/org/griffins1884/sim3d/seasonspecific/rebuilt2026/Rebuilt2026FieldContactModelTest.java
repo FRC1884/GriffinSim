@@ -68,4 +68,42 @@ class Rebuilt2026FieldContactModelTest {
     assertEquals(TerrainFeature.RED_RIGHT_TRENCH, trenchSample.feature());
     assertTrue(trenchSample.clearanceSatisfied());
   }
+
+  @Test
+  void blocksHubTowerAndTrenchEdgeRegions() {
+    TerrainContactSample hubSample =
+        MODEL.sampleContact(
+            new Pose2d(
+                Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
+                Rebuilt2026FieldContactModel.hubCenterYMeters(),
+                new Rotation2d()),
+            new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
+    TerrainContactSample towerSample =
+        MODEL.sampleContact(
+            new Pose2d(
+                Rebuilt2026FieldContactModel.blueTowerFrontFaceXMeters() - Units.inchesToMeters(12.0),
+                Rebuilt2026FieldContactModel.blueTowerCenterYMeters()
+                    + Units.inchesToMeters(20.0),
+                new Rotation2d()),
+            new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
+    TerrainContactSample trenchEdgeSample =
+        MODEL.sampleContact(
+            new Pose2d(
+                Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
+                Rebuilt2026FieldContactModel.fieldWidthMeters() - Units.inchesToMeters(57.0),
+                new Rotation2d()),
+            new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
+
+    assertEquals(TerrainFeature.BLUE_HUB, hubSample.feature());
+    assertFalse(hubSample.traversableSurface());
+    assertFalse(hubSample.clearanceSatisfied());
+
+    assertEquals(TerrainFeature.BLUE_TOWER, towerSample.feature());
+    assertFalse(towerSample.traversableSurface());
+    assertFalse(towerSample.clearanceSatisfied());
+
+    assertEquals(TerrainFeature.BLUE_LEFT_TRENCH_EDGE, trenchEdgeSample.feature());
+    assertFalse(trenchEdgeSample.traversableSurface());
+    assertFalse(trenchEdgeSample.clearanceSatisfied());
+  }
 }

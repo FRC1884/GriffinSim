@@ -30,6 +30,9 @@ Today this repository contains:
 - a first-class 3D chassis snapshot with pose, angular rates, and field-relative linear velocity and acceleration
 - a standalone 2026 rebuilt field contact model with explicit bump surfaces and trench underpass clearance checks
 - a quasi-static swerve load-transfer estimator that converts terrain/contact state into per-wheel normal force and traction capacity estimates
+- shared terrain-drive authority laws that robot repos can apply to module and steering response
+- a GriffinSim-owned 2026 Maple arena with hub, trench edge, tower, and border obstacles
+- default rebuilt-2026 robot profile values for chassis footprint and mass properties
 - integration helpers for holonomic autonomous libraries, visualization frames, static field markers, and repeatable 2026 auto scenarios
 
 That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](PHASE_PLAN.md).
