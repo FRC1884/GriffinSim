@@ -149,7 +149,24 @@ class Rebuilt2026FieldContactModelTest {
   void matchesOfficialAndyMarkFieldDimensions() {
     assertEquals(Units.inchesToMeters(650.12), Rebuilt2026FieldContactModel.fieldLengthMeters(), 1e-9);
     assertEquals(Units.inchesToMeters(316.64), Rebuilt2026FieldContactModel.fieldWidthMeters(), 1e-9);
+    assertEquals(Units.inchesToMeters(181.56), Rebuilt2026FieldContactModel.hubCenterXBlueMeters(), 1e-9);
+    assertEquals(Units.inchesToMeters(468.56), Rebuilt2026FieldContactModel.hubCenterXRedMeters(), 1e-9);
     assertEquals(Units.inchesToMeters(47.00), Rebuilt2026FieldContactModel.hubCollisionHeightMeters(), 1e-9);
     assertEquals(Units.inchesToMeters(58.41), Rebuilt2026FieldContactModel.hubCollisionWidthMeters(), 1e-9);
+  }
+
+  @Test
+  void trenchCornerReturnsArePartOfTheEdgeCollisionRegion() {
+    Rebuilt2026FieldContactModel.RectRegion[] edgeRegions =
+        Rebuilt2026FieldContactModel.blueLeftTrenchEdgeRegions();
+    Rebuilt2026FieldContactModel.RectRegion topReturn = edgeRegions[3];
+
+    TerrainContactSample sample =
+        MODEL.sampleContact(
+            new Pose2d(topReturn.centerX(), topReturn.centerY(), new Rotation2d()),
+            new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
+
+    assertEquals(TerrainFeature.BLUE_LEFT_TRENCH_EDGE, sample.feature());
+    assertFalse(sample.traversableSurface());
   }
 }

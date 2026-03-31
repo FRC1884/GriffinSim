@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -87,8 +88,8 @@ class TerrainAwareSwerveSimulationTest {
     TerrainSample movedSample = simulation.getTerrainSample();
     ChassisState3d movedState = simulation.getChassisState3d();
 
-    assertEquals(5.0, simulation.getRollRateRadPerSec(), 1e-9);
-    assertEquals(2.5, simulation.getPitchRateRadPerSec(), 1e-9);
+    assertEquals(5.0, simulation.getRollRateRadPerSec(), 0.05);
+    assertEquals(2.5, simulation.getPitchRateRadPerSec(), 0.05);
     assertEquals(1.0, movedSample.heightMeters(), 1e-9);
     assertEquals(5.0, movedState.fieldRelativeLinearVelocityMetersPerSec().getZ(), 1e-9);
     assertEquals(25.0, movedState.fieldRelativeLinearAccelerationMetersPerSecSq().getZ(), 1e-9);
@@ -137,6 +138,67 @@ class TerrainAwareSwerveSimulationTest {
             + state.tractionState().rearLeft().normalForceNewtons()
             + state.tractionState().rearRight().normalForceNewtons(),
         1e-6);
+  }
+
+  @Test
+  void goesUnsupportedAfterDrivingOffABumpCrest() {
+    FakeBackend backend =
+        new FakeBackend(
+            new Pose2d(0.0, 0.0, new Rotation2d()),
+            new ChassisSpeeds(2.0, 0.0, 0.0),
+            new ChassisSpeeds(2.0, 0.0, 0.0));
+    AtomicReference<Double> timeSec = new AtomicReference<>(0.0);
+    TerrainContactModel contactModel =
+        new TerrainContactModel() {
+          @Override
+          public TerrainSample sample(Pose2d robotPose) {
+            double height = robotPose.getX() < 0.6 ? robotPose.getX() : 0.0;
+            return new TerrainSample(
+                new Pose3d(
+                    robotPose.getX(),
+                    robotPose.getY(),
+                    height,
+                    new Rotation3d(0.0, 0.08, robotPose.getRotation().getRadians())),
+                0.0,
+                0.08,
+                height);
+          }
+
+          @Override
+          public TerrainContactSample sampleContact(
+              Pose2d robotPose, ChassisFootprint chassisFootprint) {
+            return new TerrainContactSample(
+                sample(robotPose),
+                TerrainFeature.BLUE_LEFT_BUMP,
+                Double.POSITIVE_INFINITY,
+                chassisFootprint.groundClearanceMeters(),
+                Double.POSITIVE_INFINITY,
+                true,
+                true);
+          }
+        };
+
+    TerrainAwareSwerveSimulation simulation =
+        new TerrainAwareSwerveSimulation(
+            backend,
+            contactModel,
+            new ChassisFootprint(0.9, 0.9, 0.45, 0.08),
+            new ChassisMassProperties(61.235, 0.30, 0.70, 0.70, 1.1),
+            timeSec::get);
+
+    simulation.getState();
+    backend.pose = new Pose2d(0.5, 0.0, new Rotation2d());
+    timeSec.set(0.2);
+    simulation.getState();
+
+    backend.pose = new Pose2d(0.7, 0.0, new Rotation2d());
+    timeSec.set(0.4);
+    DriveSimulationState airborneState = simulation.getState();
+
+    assertFalse(simulation.isBodySupported());
+    assertFalse(airborneState.tractionState().tractionAvailable());
+    assertEquals(0.0, airborneState.terrainSample().heightMeters(), 1e-9);
+    assertFalse(airborneState.pose3d().getZ() <= airborneState.terrainSample().heightMeters());
   }
 
   private static final class FakeBackend implements SwerveDriveBackend {

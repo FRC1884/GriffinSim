@@ -15,11 +15,11 @@ public final class Rebuilt2026RobotProfile {
 
   public static final ChassisMassProperties DEFAULT_CHASSIS_MASS_PROPERTIES =
       new ChassisMassProperties(
-          45.0,
+          61.235,
           Units.inchesToMeters(11.5),
           Units.inchesToMeters(27.5),
           Units.inchesToMeters(27.5),
-          1.2);
+          1.1);
 
   private Rebuilt2026RobotProfile() {}
 }

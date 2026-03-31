@@ -1,6 +1,7 @@
 package org.griffins1884.sim3d;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import java.util.Objects;
@@ -18,6 +19,12 @@ import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
  * autonomous, and 3D visualization use the same terrain sample.
  */
 public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapter {
+  private static final double GRAVITY_MPS2 = 9.80665;
+  private static final double SUPPORTED_ATTITUDE_TIME_CONSTANT_SEC = 0.02;
+  private static final double AIRBORNE_ATTITUDE_DAMPING = 2.0;
+  private static final double LAUNCH_VERTICAL_SPEED_THRESHOLD_MPS = 0.35;
+  private static final double LAUNCH_SEPARATION_MARGIN_METERS = 0.01;
+
   private final SwerveDriveBackend driveBackend;
   private final TerrainModel terrainModel;
   private final TerrainContactModel terrainContactModel;
@@ -32,6 +39,11 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
   private SwerveTractionState cachedTractionState = null;
   private double rollRateRadPerSec = 0.0;
   private double pitchRateRadPerSec = 0.0;
+  private boolean bodySupported = true;
+  private double bodyHeightMeters = 0.0;
+  private double bodyVerticalVelocityMps = 0.0;
+  private double bodyRollRad = 0.0;
+  private double bodyPitchRad = 0.0;
 
   public TerrainAwareSwerveSimulation(
       SwerveDriveSimulation mapleSimulation, TerrainModel terrainModel) {
@@ -196,6 +208,11 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
     cachedTractionState = null;
     rollRateRadPerSec = 0.0;
     pitchRateRadPerSec = 0.0;
+    bodySupported = true;
+    bodyHeightMeters = 0.0;
+    bodyVerticalVelocityMps = 0.0;
+    bodyRollRad = 0.0;
+    bodyPitchRad = 0.0;
   }
 
   public synchronized TerrainSample getTerrainSample() {
@@ -209,48 +226,69 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
       return cachedChassisState;
     }
 
+    Pose2d pose2d = driveBackend.getPose2d();
+
     TerrainContactSample newTerrainContactSample = null;
     TerrainSample newSample;
     if (terrainContactModel != null && chassisFootprint != null) {
-      newTerrainContactSample = terrainContactModel.sampleContact(getPose2d(), chassisFootprint);
+      newTerrainContactSample = terrainContactModel.sampleContact(pose2d, chassisFootprint);
       newSample = newTerrainContactSample.terrainSample();
     } else {
-      newSample = terrainModel.sample(getPose2d());
+      newSample = terrainModel.sample(pose2d);
     }
     ChassisSpeeds fieldRelativeChassisSpeeds = getFieldRelativeChassisSpeeds();
     Translation3d previousFieldVelocity =
         cachedChassisState == null
             ? new Translation3d()
             : cachedChassisState.fieldRelativeLinearVelocityMetersPerSec();
-    Translation3d fieldVelocity =
-        new Translation3d(
-            fieldRelativeChassisSpeeds.vxMetersPerSecond,
-            fieldRelativeChassisSpeeds.vyMetersPerSecond,
-            0.0);
+    Translation3d fieldVelocity;
     Translation3d fieldAcceleration = new Translation3d();
     if (cachedSample != null && Double.isFinite(lastSampleTimestampSec)) {
       double dt = now - lastSampleTimestampSec;
       if (dt > 1e-5) {
-        rollRateRadPerSec = (newSample.rollRadians() - cachedSample.rollRadians()) / dt;
-        pitchRateRadPerSec = (newSample.pitchRadians() - cachedSample.pitchRadians()) / dt;
+        double terrainVerticalVelocity =
+            (newSample.heightMeters() - cachedSample.heightMeters()) / dt;
+        updateBodyState(newSample, terrainVerticalVelocity, previousFieldVelocity.getZ(), dt);
         fieldVelocity =
             new Translation3d(
                 fieldRelativeChassisSpeeds.vxMetersPerSecond,
                 fieldRelativeChassisSpeeds.vyMetersPerSecond,
-                (newSample.heightMeters() - cachedSample.heightMeters()) / dt);
+                bodyVerticalVelocityMps);
         fieldAcceleration =
             new Translation3d(
                 (fieldVelocity.getX() - previousFieldVelocity.getX()) / dt,
                 (fieldVelocity.getY() - previousFieldVelocity.getY()) / dt,
                 (fieldVelocity.getZ() - previousFieldVelocity.getZ()) / dt);
+      } else {
+        initializeBodyState(newSample);
+        fieldVelocity =
+            new Translation3d(
+                fieldRelativeChassisSpeeds.vxMetersPerSecond,
+                fieldRelativeChassisSpeeds.vyMetersPerSecond,
+                bodyVerticalVelocityMps);
       }
+    } else {
+      initializeBodyState(newSample);
+      fieldVelocity =
+          new Translation3d(
+              fieldRelativeChassisSpeeds.vxMetersPerSecond,
+              fieldRelativeChassisSpeeds.vyMetersPerSecond,
+              bodyVerticalVelocityMps);
     }
+
+    Pose3d pose3d =
+        new Pose3d(
+            pose2d.getX(),
+            pose2d.getY(),
+            bodyHeightMeters,
+            new edu.wpi.first.math.geometry.Rotation3d(
+                bodyRollRad, bodyPitchRad, pose2d.getRotation().getRadians()));
 
     cachedSample = newSample;
     cachedTerrainContactSample = newTerrainContactSample;
     cachedChassisState =
         new ChassisState3d(
-            newSample.pose3d(),
+            pose3d,
             fieldVelocity,
             fieldAcceleration,
             new AngularVelocity3d(
@@ -258,12 +296,74 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
                 pitchRateRadPerSec,
                 getRobotRelativeChassisSpeeds().omegaRadiansPerSecond));
     cachedTractionState =
-        cachedTerrainContactSample != null && chassisMassProperties != null
+        !bodySupported
+            ? SwerveTractionState.unsupported()
+            : cachedTerrainContactSample != null && chassisMassProperties != null
             ? SwerveLoadTransferEstimator.estimate(
                 cachedChassisState, cachedTerrainContactSample, chassisMassProperties)
             : null;
     lastSampleTimestampSec = now;
     return cachedChassisState;
+  }
+
+  private void initializeBodyState(TerrainSample terrainSample) {
+    bodySupported = true;
+    bodyHeightMeters = terrainSample.heightMeters();
+    bodyVerticalVelocityMps = 0.0;
+    bodyRollRad = terrainSample.rollRadians();
+    bodyPitchRad = terrainSample.pitchRadians();
+    rollRateRadPerSec = 0.0;
+    pitchRateRadPerSec = 0.0;
+  }
+
+  private void updateBodyState(
+      TerrainSample terrainSample,
+      double terrainVerticalVelocity,
+      double previousBodyVerticalVelocity,
+      double dt) {
+    if (bodySupported
+        && previousBodyVerticalVelocity > LAUNCH_VERTICAL_SPEED_THRESHOLD_MPS
+        && terrainVerticalVelocity + LAUNCH_SEPARATION_MARGIN_METERS / dt < previousBodyVerticalVelocity) {
+      bodySupported = false;
+      bodyVerticalVelocityMps = previousBodyVerticalVelocity;
+      bodyHeightMeters += bodyVerticalVelocityMps * dt;
+    }
+
+    if (!bodySupported) {
+      bodyVerticalVelocityMps -= GRAVITY_MPS2 * dt;
+      bodyHeightMeters += bodyVerticalVelocityMps * dt;
+      if (bodyHeightMeters <= terrainSample.heightMeters()) {
+        bodySupported = true;
+        bodyHeightMeters = terrainSample.heightMeters();
+        bodyVerticalVelocityMps = terrainVerticalVelocity;
+      }
+    }
+
+    if (bodySupported) {
+      bodyHeightMeters = terrainSample.heightMeters();
+      bodyVerticalVelocityMps = terrainVerticalVelocity;
+      followSupportedAttitude(terrainSample, dt);
+      return;
+    }
+
+    followAirborneAttitude(dt);
+  }
+
+  private void followSupportedAttitude(TerrainSample terrainSample, double dt) {
+    double previousRoll = bodyRollRad;
+    double previousPitch = bodyPitchRad;
+    double blend = 1.0 - Math.exp(-dt / SUPPORTED_ATTITUDE_TIME_CONSTANT_SEC);
+    bodyRollRad += (terrainSample.rollRadians() - bodyRollRad) * blend;
+    bodyPitchRad += (terrainSample.pitchRadians() - bodyPitchRad) * blend;
+    rollRateRadPerSec = (bodyRollRad - previousRoll) / dt;
+    pitchRateRadPerSec = (bodyPitchRad - previousPitch) / dt;
+  }
+
+  private void followAirborneAttitude(double dt) {
+    rollRateRadPerSec -= rollRateRadPerSec * AIRBORNE_ATTITUDE_DAMPING * dt;
+    pitchRateRadPerSec -= pitchRateRadPerSec * AIRBORNE_ATTITUDE_DAMPING * dt;
+    bodyRollRad += rollRateRadPerSec * dt;
+    bodyPitchRad += pitchRateRadPerSec * dt;
   }
 
   public synchronized double getRollRateRadPerSec() {
@@ -274,5 +374,10 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
   public synchronized double getPitchRateRadPerSec() {
     getTerrainSample();
     return pitchRateRadPerSec;
+  }
+
+  public synchronized boolean isBodySupported() {
+    getTerrainSample();
+    return bodySupported;
   }
 }

@@ -68,16 +68,18 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     }
 
     private void addHubObstacles() {
+      addHubPerimeter(Rebuilt2026FieldContactModel.blueHubFaceCenters());
+      addHubPerimeter(Rebuilt2026FieldContactModel.redHubFaceCenters());
       addRectangularObstacle(
-          Rebuilt2026FieldContactModel.hubCollisionWidthMeters(),
-          Rebuilt2026FieldContactModel.hubCollisionHeightMeters(),
+          Inches.of(35.0).in(Meters),
+          Inches.of(35.0).in(Meters),
           new Pose2d(
               hubCenterXBlue(),
               Rebuilt2026FieldContactModel.hubCenterYMeters(),
               new Rotation2d()));
       addRectangularObstacle(
-          Rebuilt2026FieldContactModel.hubCollisionWidthMeters(),
-          Rebuilt2026FieldContactModel.hubCollisionHeightMeters(),
+          Inches.of(35.0).in(Meters),
+          Inches.of(35.0).in(Meters),
           new Pose2d(
               hubCenterXRed(),
               Rebuilt2026FieldContactModel.hubCenterYMeters(),
@@ -85,14 +87,10 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     }
 
     private void addTrenchEdgeWalls() {
-      addRectRegion(Rebuilt2026FieldContactModel.blueLeftTrenchSupportBox());
-      addRectRegion(Rebuilt2026FieldContactModel.blueRightTrenchSupportBox());
-      addRectRegion(Rebuilt2026FieldContactModel.redLeftTrenchSupportBox());
-      addRectRegion(Rebuilt2026FieldContactModel.redRightTrenchSupportBox());
-      addSegments(Rebuilt2026FieldContactModel.blueLeftTrenchWalls());
-      addSegments(Rebuilt2026FieldContactModel.blueRightTrenchWalls());
-      addSegments(Rebuilt2026FieldContactModel.redLeftTrenchWalls());
-      addSegments(Rebuilt2026FieldContactModel.redRightTrenchWalls());
+      addRectRegions(Rebuilt2026FieldContactModel.blueLeftTrenchEdgeRegions());
+      addRectRegions(Rebuilt2026FieldContactModel.blueRightTrenchEdgeRegions());
+      addRectRegions(Rebuilt2026FieldContactModel.redLeftTrenchEdgeRegions());
+      addRectRegions(Rebuilt2026FieldContactModel.redRightTrenchEdgeRegions());
     }
 
     private void addTowerObstacles() {
@@ -170,9 +168,17 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
               new Rotation2d()));
     }
 
-    private void addSegments(Rebuilt2026FieldContactModel.Segment[] segments) {
-      for (Rebuilt2026FieldContactModel.Segment segment : segments) {
-        addBorderLine(segment.start(), segment.end());
+    private void addRectRegions(Rebuilt2026FieldContactModel.RectRegion[] regions) {
+      for (Rebuilt2026FieldContactModel.RectRegion region : regions) {
+        addRectRegion(region);
+      }
+    }
+
+    private void addHubPerimeter(Translation2d[] perimeterPoints) {
+      for (int i = 0; i < perimeterPoints.length; i++) {
+        Translation2d start = perimeterPoints[i];
+        Translation2d end = perimeterPoints[(i + 1) % perimeterPoints.length];
+        addBorderLine(start, end);
       }
     }
   }

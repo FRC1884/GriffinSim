@@ -17,4 +17,16 @@ public record SwerveTractionState(
       case REAR_RIGHT -> rearRight;
     };
   }
+
+  public static SwerveTractionState unsupported() {
+    WheelLoadSample unsupportedWheel = new WheelLoadSample(0.0, 0.0, 0.0);
+    return new SwerveTractionState(
+        unsupportedWheel,
+        unsupportedWheel,
+        unsupportedWheel,
+        unsupportedWheel,
+        0.0,
+        0.0,
+        false);
+  }
 }

@@ -9,6 +9,9 @@ public final class TerrainDriveLaws {
     if (tractionState == null || corner == null) {
       return contactSample == null ? 1.0 : slopeDriveScale(contactSample);
     }
+    if (!tractionState.tractionAvailable()) {
+      return 0.0;
+    }
 
     double normalizedLoad = clamp(tractionState.forCorner(corner).normalizedLoad(), 0.55, 1.35);
     double driveScale = clamp(0.35 + (0.65 * normalizedLoad), 0.45, 1.25);
@@ -28,6 +31,9 @@ public final class TerrainDriveLaws {
       SwerveTractionState tractionState, SwerveCorner corner, TerrainContactSample contactSample) {
     if (tractionState == null || corner == null) {
       return contactSample != null && !contactSample.traversableSurface() ? 0.0 : 1.0;
+    }
+    if (!tractionState.tractionAvailable()) {
+      return 0.0;
     }
 
     double normalizedLoad = clamp(tractionState.forCorner(corner).normalizedLoad(), 0.7, 1.25);
