@@ -40,6 +40,11 @@ That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](
 ./gradlew build
 ```
 
+## Release And Integration
+
+- Versioning strategy: [VERSIONING.md](VERSIONING.md)
+- Robot-repo consumption guidance: [docs/ROBOT_INTEGRATION.md](docs/ROBOT_INTEGRATION.md)
+
 ## Early Integration Goal
 
 Robot repositories should depend on GriffinSim only in desktop simulation configurations. Real hardware and deploy packaging should continue to use normal robot code paths with no simulator-specific assets copied to the roboRIO.

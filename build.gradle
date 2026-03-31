@@ -1,15 +1,18 @@
 plugins {
     id "java-library"
+    id "maven-publish"
 }
 
-group = "org.griffins1884"
-version = "0.1.0-SNAPSHOT"
-description = "Standalone 3D-oriented simulation library for FRC robot projects."
+group = findProperty("GROUP") ?: "org.griffins1884"
+version = findProperty("VERSION_NAME") ?: "0.1.0-SNAPSHOT"
+description = findProperty("POM_DESCRIPTION") ?: "Standalone 3D-oriented simulation library for FRC robot projects."
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -42,4 +45,18 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = "GriffinSim"
+
+            pom {
+                name = findProperty("POM_NAME") ?: "GriffinSim"
+                description = project.description
+            }
+        }
+    }
 }
