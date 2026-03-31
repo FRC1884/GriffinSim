@@ -16,6 +16,21 @@
       "groupId": "org.griffins1884",
       "artifactId": "GriffinSim",
       "version": "0.1.1"
+    },
+    {
+      "groupId": "org.ironmaple",
+      "artifactId": "maplesim-java",
+      "version": "0.3.14"
+    },
+    {
+      "groupId": "org.dyn4j",
+      "artifactId": "dyn4j",
+      "version": "5.0.2"
+    },
+    {
+      "groupId": "us.hebi.quickbuf",
+      "artifactId": "quickbuf-runtime",
+      "version": "1.4"
     }
   ],
   "jniDependencies": [],
