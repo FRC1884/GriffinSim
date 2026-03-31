@@ -38,8 +38,6 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     private static final double FIELD_Y_MAX = Rebuilt2026FieldContactModel.fieldWidthMeters();
 
     private static final double INTERNAL_WALL_THICKNESS = Inches.of(2.0).in(Meters);
-    private static final double HUB_SIZE_METERS =
-        Rebuilt2026FieldContactModel.hubCollisionSizeMeters();
     private static final double TOWER_WIDTH_METERS =
         Rebuilt2026FieldContactModel.towerWidthMeters();
     private static final double TOWER_DEPTH_METERS =
@@ -47,13 +45,6 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     private static final double TOWER_INNER_OPENING_WIDTH_METERS = Inches.of(32.250).in(Meters);
     private static final double TOWER_SIDE_WIDTH_METERS =
         (TOWER_WIDTH_METERS - TOWER_INNER_OPENING_WIDTH_METERS) * 0.5;
-    private static final double TRENCH_DEPTH_METERS =
-        Rebuilt2026FieldContactModel.trenchDepthMeters();
-    private static final double LEFT_TRENCH_BLOCK_WIDTH_METERS =
-        Rebuilt2026FieldContactModel.leftTrenchBlockWidthMeters();
-    private static final double RIGHT_TRENCH_BLOCK_WIDTH_METERS =
-        Rebuilt2026FieldContactModel.rightTrenchBlockWidthMeters();
-
     RebuiltFieldObstaclesMap(boolean includeTraversalStructures) {
       addFieldBorder();
       addHubObstacles();
@@ -78,15 +69,15 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
 
     private void addHubObstacles() {
       addRectangularObstacle(
-          HUB_SIZE_METERS,
-          HUB_SIZE_METERS,
+          Rebuilt2026FieldContactModel.hubCollisionWidthMeters(),
+          Rebuilt2026FieldContactModel.hubCollisionHeightMeters(),
           new Pose2d(
               hubCenterXBlue(),
               Rebuilt2026FieldContactModel.hubCenterYMeters(),
               new Rotation2d()));
       addRectangularObstacle(
-          HUB_SIZE_METERS,
-          HUB_SIZE_METERS,
+          Rebuilt2026FieldContactModel.hubCollisionWidthMeters(),
+          Rebuilt2026FieldContactModel.hubCollisionHeightMeters(),
           new Pose2d(
               hubCenterXRed(),
               Rebuilt2026FieldContactModel.hubCenterYMeters(),
@@ -94,34 +85,10 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     }
 
     private void addTrenchEdgeWalls() {
-      addRectangularObstacle(
-          TRENCH_DEPTH_METERS,
-          LEFT_TRENCH_BLOCK_WIDTH_METERS,
-          new Pose2d(
-              Rebuilt2026FieldContactModel.blueTrenchCenterXMeters(),
-              Rebuilt2026FieldContactModel.blueLeftTrenchBlockCenterYMeters(),
-              new Rotation2d()));
-      addRectangularObstacle(
-          TRENCH_DEPTH_METERS,
-          RIGHT_TRENCH_BLOCK_WIDTH_METERS,
-          new Pose2d(
-              Rebuilt2026FieldContactModel.blueTrenchCenterXMeters(),
-              Rebuilt2026FieldContactModel.blueRightTrenchBlockCenterYMeters(),
-              new Rotation2d()));
-      addRectangularObstacle(
-          TRENCH_DEPTH_METERS,
-          LEFT_TRENCH_BLOCK_WIDTH_METERS,
-          new Pose2d(
-              Rebuilt2026FieldContactModel.redTrenchCenterXMeters(),
-              Rebuilt2026FieldContactModel.redLeftTrenchBlockCenterYMeters(),
-              new Rotation2d()));
-      addRectangularObstacle(
-          TRENCH_DEPTH_METERS,
-          RIGHT_TRENCH_BLOCK_WIDTH_METERS,
-          new Pose2d(
-              Rebuilt2026FieldContactModel.redTrenchCenterXMeters(),
-              Rebuilt2026FieldContactModel.redRightTrenchBlockCenterYMeters(),
-              new Rotation2d()));
+      addRectRegions(Rebuilt2026FieldContactModel.blueLeftTrenchSkirts());
+      addRectRegions(Rebuilt2026FieldContactModel.blueRightTrenchSkirts());
+      addRectRegions(Rebuilt2026FieldContactModel.redLeftTrenchSkirts());
+      addRectRegions(Rebuilt2026FieldContactModel.redRightTrenchSkirts());
     }
 
     private void addTowerObstacles() {
@@ -187,6 +154,18 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
 
     private static double hubCenterXRed() {
       return Rebuilt2026FieldContactModel.hubCenterXRedMeters();
+    }
+
+    private void addRectRegions(Rebuilt2026FieldContactModel.RectRegion[] regions) {
+      for (Rebuilt2026FieldContactModel.RectRegion region : regions) {
+        addRectangularObstacle(
+            region.maxX() - region.minX(),
+            region.maxY() - region.minY(),
+            new Pose2d(
+                (region.minX() + region.maxX()) * 0.5,
+                (region.minY() + region.maxY()) * 0.5,
+                new Rotation2d()));
+      }
     }
   }
 }

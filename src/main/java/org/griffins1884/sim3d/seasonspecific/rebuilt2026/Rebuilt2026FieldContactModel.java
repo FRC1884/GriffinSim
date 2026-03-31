@@ -30,8 +30,8 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
   private static final double CAD_FIELD_ORIGIN_X_METERS = 8.2497799;
   private static final double CAD_FIELD_ORIGIN_Y_METERS = 4.0213534;
 
-  private static final RectRegion BLUE_HUB_BOUNDS = cadRect(-4235.8, -3054.0, -590.9, 590.9);
-  private static final RectRegion RED_HUB_BOUNDS = cadRect(3054.0, 4235.8, -590.9, 590.9);
+  private static final RectRegion BLUE_HUB_BOUNDS = cadRect(-4257.7, -2772.5, -742.3, 742.3);
+  private static final RectRegion RED_HUB_BOUNDS = cadRect(2772.5, 4257.7, -742.3, 742.3);
 
   private static final RectRegion BLUE_LEFT_BUMP_BOUNDS = cadRect(-4208.7, -3081.1, 517.9, 2751.1);
   private static final RectRegion BLUE_RIGHT_BUMP_BOUNDS =
@@ -53,6 +53,38 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
       cadRect(-4241.8, -3048.0, -2451.1, 2451.1);
   private static final RectRegion RED_TRENCH_OPEN_BOUNDS =
       cadRect(3048.0, 4241.8, -2451.1, 2451.1);
+  private static final RectRegion BLUE_LEFT_TRENCH_OUTER_SKIRT =
+      cadRect(-4229.1, -3060.7, 2751.1, 2755.9);
+  private static final RectRegion BLUE_LEFT_TRENCH_INNER_SKIRT =
+      cadRect(-4229.1, -3060.7, 2451.1, 2455.9);
+  private static final RectRegion BLUE_LEFT_TRENCH_LEFT_SKIRT =
+      cadRect(-4241.8, -3746.5, 2455.9, 2751.1);
+  private static final RectRegion BLUE_LEFT_TRENCH_RIGHT_SKIRT =
+      cadRect(-3543.3, -3048.0, 2455.9, 2751.1);
+  private static final RectRegion BLUE_RIGHT_TRENCH_OUTER_SKIRT =
+      cadRect(-4229.1, -3060.7, -2755.9, -2751.1);
+  private static final RectRegion BLUE_RIGHT_TRENCH_INNER_SKIRT =
+      cadRect(-4229.1, -3060.7, -2455.9, -2451.1);
+  private static final RectRegion BLUE_RIGHT_TRENCH_LEFT_SKIRT =
+      cadRect(-4241.8, -3746.5, -2751.1, -2455.9);
+  private static final RectRegion BLUE_RIGHT_TRENCH_RIGHT_SKIRT =
+      cadRect(-3543.3, -3048.0, -2751.1, -2455.9);
+  private static final RectRegion RED_LEFT_TRENCH_OUTER_SKIRT =
+      cadRect(3060.7, 4229.1, 2751.1, 2755.9);
+  private static final RectRegion RED_LEFT_TRENCH_INNER_SKIRT =
+      cadRect(3060.7, 4229.1, 2451.1, 2455.9);
+  private static final RectRegion RED_LEFT_TRENCH_LEFT_SKIRT =
+      cadRect(3048.0, 3543.3, 2455.9, 2751.1);
+  private static final RectRegion RED_LEFT_TRENCH_RIGHT_SKIRT =
+      cadRect(3746.5, 4241.8, 2455.9, 2751.1);
+  private static final RectRegion RED_RIGHT_TRENCH_OUTER_SKIRT =
+      cadRect(3060.7, 4229.1, -2755.9, -2751.1);
+  private static final RectRegion RED_RIGHT_TRENCH_INNER_SKIRT =
+      cadRect(3060.7, 4229.1, -2455.9, -2451.1);
+  private static final RectRegion RED_RIGHT_TRENCH_LEFT_SKIRT =
+      cadRect(3048.0, 3543.3, -2751.1, -2455.9);
+  private static final RectRegion RED_RIGHT_TRENCH_RIGHT_SKIRT =
+      cadRect(3746.5, 4241.8, -2751.1, -2455.9);
 
   private static final double BUMP_HEIGHT_METERS = Units.inchesToMeters(6.513);
   private static final double BUMP_RAMP_FRACTION = 0.34;
@@ -360,6 +392,14 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
         * 0.25;
   }
 
+  public static double hubCollisionWidthMeters() {
+    return BLUE_HUB_BOUNDS.maxX - BLUE_HUB_BOUNDS.minX;
+  }
+
+  public static double hubCollisionHeightMeters() {
+    return BLUE_HUB_BOUNDS.maxY - BLUE_HUB_BOUNDS.minY;
+  }
+
   public static double blueTowerFrontFaceXMeters() {
     return TOWER_FRONT_FACE_X_METERS;
   }
@@ -418,6 +458,42 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
 
   public static double rightTrenchBlockWidthMeters() {
     return BLUE_RIGHT_TRENCH_BLOCK_BOUNDS.maxY - BLUE_RIGHT_TRENCH_BLOCK_BOUNDS.minY;
+  }
+
+  public static RectRegion[] blueLeftTrenchSkirts() {
+    return new RectRegion[] {
+      BLUE_LEFT_TRENCH_LEFT_SKIRT,
+      BLUE_LEFT_TRENCH_RIGHT_SKIRT,
+      BLUE_LEFT_TRENCH_INNER_SKIRT,
+      BLUE_LEFT_TRENCH_OUTER_SKIRT
+    };
+  }
+
+  public static RectRegion[] blueRightTrenchSkirts() {
+    return new RectRegion[] {
+      BLUE_RIGHT_TRENCH_LEFT_SKIRT,
+      BLUE_RIGHT_TRENCH_RIGHT_SKIRT,
+      BLUE_RIGHT_TRENCH_INNER_SKIRT,
+      BLUE_RIGHT_TRENCH_OUTER_SKIRT
+    };
+  }
+
+  public static RectRegion[] redLeftTrenchSkirts() {
+    return new RectRegion[] {
+      RED_LEFT_TRENCH_LEFT_SKIRT,
+      RED_LEFT_TRENCH_RIGHT_SKIRT,
+      RED_LEFT_TRENCH_INNER_SKIRT,
+      RED_LEFT_TRENCH_OUTER_SKIRT
+    };
+  }
+
+  public static RectRegion[] redRightTrenchSkirts() {
+    return new RectRegion[] {
+      RED_RIGHT_TRENCH_LEFT_SKIRT,
+      RED_RIGHT_TRENCH_RIGHT_SKIRT,
+      RED_RIGHT_TRENCH_INNER_SKIRT,
+      RED_RIGHT_TRENCH_OUTER_SKIRT
+    };
   }
 
   private static void addHubMarkers(List<FieldMarkerSample> markers) {
@@ -514,7 +590,7 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     return cadSpanMillimeters / 1000.0;
   }
 
-  private record RectRegion(double minX, double maxX, double minY, double maxY) {
+  public record RectRegion(double minX, double maxX, double minY, double maxY) {
     Translation3d center3d(double z) {
       return new Translation3d((minX + maxX) * 0.5, (minY + maxY) * 0.5, z);
     }
