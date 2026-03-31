@@ -37,8 +37,8 @@ class Rebuilt2026FieldContactModelTest {
   void detectsTrenchUnderpassAndChecksOverheadClearance() {
     Translation2d blueTrenchCenter =
         new Translation2d(
-            4.01,
-            2.0);
+            Rebuilt2026FieldContactModel.blueTrenchCenterXMeters(),
+            Rebuilt2026FieldContactModel.blueRightTrenchCenterYMeters());
 
     TerrainContactSample shortRobot =
         MODEL.sampleContact(
@@ -67,8 +67,8 @@ class Rebuilt2026FieldContactModelTest {
             new Rotation2d());
     Pose2d redRightTrenchPose =
         new Pose2d(
-            11.30,
-            2.0,
+            Rebuilt2026FieldContactModel.redTrenchCenterXMeters(),
+            Rebuilt2026FieldContactModel.redRightTrenchCenterYMeters(),
             new Rotation2d());
 
     TerrainContactSample bumpSample =
@@ -102,8 +102,9 @@ class Rebuilt2026FieldContactModelTest {
     TerrainContactSample trenchEdgeSample =
         MODEL.sampleContact(
             new Pose2d(
-                Rebuilt2026FieldContactModel.hubCenterXBlueMeters(),
-                Rebuilt2026FieldContactModel.fieldWidthMeters() - Units.inchesToMeters(1.0),
+                Rebuilt2026FieldContactModel.blueTrenchCenterXMeters()
+                    + Units.inchesToMeters(6.5),
+                Rebuilt2026FieldContactModel.blueLeftTrenchCenterYMeters(),
                 new Rotation2d()),
             new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
 
@@ -142,5 +143,13 @@ class Rebuilt2026FieldContactModelTest {
 
     assertTrue(entryHeight < crestHeight);
     assertEquals(crestHeight, shiftedSpanHeight, 1e-6);
+  }
+
+  @Test
+  void matchesOfficialAndyMarkFieldDimensions() {
+    assertEquals(Units.inchesToMeters(650.12), Rebuilt2026FieldContactModel.fieldLengthMeters(), 1e-9);
+    assertEquals(Units.inchesToMeters(316.64), Rebuilt2026FieldContactModel.fieldWidthMeters(), 1e-9);
+    assertEquals(Units.inchesToMeters(47.00), Rebuilt2026FieldContactModel.hubCollisionHeightMeters(), 1e-9);
+    assertEquals(Units.inchesToMeters(58.41), Rebuilt2026FieldContactModel.hubCollisionWidthMeters(), 1e-9);
   }
 }

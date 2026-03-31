@@ -85,10 +85,14 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
     }
 
     private void addTrenchEdgeWalls() {
-      addRectRegions(Rebuilt2026FieldContactModel.blueLeftTrenchSkirts());
-      addRectRegions(Rebuilt2026FieldContactModel.blueRightTrenchSkirts());
-      addRectRegions(Rebuilt2026FieldContactModel.redLeftTrenchSkirts());
-      addRectRegions(Rebuilt2026FieldContactModel.redRightTrenchSkirts());
+      addRectRegion(Rebuilt2026FieldContactModel.blueLeftTrenchSupportBox());
+      addRectRegion(Rebuilt2026FieldContactModel.blueRightTrenchSupportBox());
+      addRectRegion(Rebuilt2026FieldContactModel.redLeftTrenchSupportBox());
+      addRectRegion(Rebuilt2026FieldContactModel.redRightTrenchSupportBox());
+      addSegments(Rebuilt2026FieldContactModel.blueLeftTrenchWalls());
+      addSegments(Rebuilt2026FieldContactModel.blueRightTrenchWalls());
+      addSegments(Rebuilt2026FieldContactModel.redLeftTrenchWalls());
+      addSegments(Rebuilt2026FieldContactModel.redRightTrenchWalls());
     }
 
     private void addTowerObstacles() {
@@ -156,15 +160,19 @@ public final class Rebuilt2026MapleArena extends SimulatedArena {
       return Rebuilt2026FieldContactModel.hubCenterXRedMeters();
     }
 
-    private void addRectRegions(Rebuilt2026FieldContactModel.RectRegion[] regions) {
-      for (Rebuilt2026FieldContactModel.RectRegion region : regions) {
-        addRectangularObstacle(
-            region.maxX() - region.minX(),
-            region.maxY() - region.minY(),
-            new Pose2d(
-                (region.minX() + region.maxX()) * 0.5,
-                (region.minY() + region.maxY()) * 0.5,
-                new Rotation2d()));
+    private void addRectRegion(Rebuilt2026FieldContactModel.RectRegion region) {
+      addRectangularObstacle(
+          region.maxX() - region.minX(),
+          region.maxY() - region.minY(),
+          new Pose2d(
+              (region.minX() + region.maxX()) * 0.5,
+              (region.minY() + region.maxY()) * 0.5,
+              new Rotation2d()));
+    }
+
+    private void addSegments(Rebuilt2026FieldContactModel.Segment[] segments) {
+      for (Rebuilt2026FieldContactModel.Segment segment : segments) {
+        addBorderLine(segment.start(), segment.end());
       }
     }
   }
