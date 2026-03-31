@@ -1,6 +1,7 @@
 package org.griffins1884.sim3d;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import java.util.Objects;
 import java.util.function.DoubleSupplier;
@@ -23,6 +24,7 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
 
   private double lastSampleTimestampSec = Double.NaN;
   private TerrainSample cachedSample = null;
+  private ChassisState3d cachedChassisState = null;
   private double rollRateRadPerSec = 0.0;
   private double pitchRateRadPerSec = 0.0;
 
@@ -74,7 +76,12 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
 
   @Override
   public edu.wpi.first.math.geometry.Pose3d getPose3d() {
-    return getTerrainSample().pose3d();
+    return getChassisState3d().pose();
+  }
+
+  @Override
+  public synchronized ChassisState3d getChassisState3d() {
+    return sampleChassisState();
   }
 
   @Override
@@ -89,21 +96,18 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
 
   @Override
   public synchronized SimImuSample getImuSample() {
-    TerrainSample terrainSample = getTerrainSample();
-    ChassisSpeeds robotRelativeSpeeds = getRobotRelativeChassisSpeeds();
-    return new SimImuSample(
-        terrainSample.pose3d().getRotation(),
-        robotRelativeSpeeds.omegaRadiansPerSecond,
-        pitchRateRadPerSec,
-        rollRateRadPerSec);
+    ChassisState3d chassisState3d = getChassisState3d();
+    return new SimImuSample(chassisState3d.pose().getRotation(), chassisState3d.angularVelocityRadPerSec());
   }
 
   @Override
   public synchronized DriveSimulationState getState() {
-    TerrainSample terrainSample = getTerrainSample();
+    ChassisState3d chassisState3d = getChassisState3d();
+    TerrainSample terrainSample = cachedSample;
     return new DriveSimulationState(
         getPose2d(),
-        terrainSample.pose3d(),
+        chassisState3d.pose(),
+        chassisState3d,
         getRobotRelativeChassisSpeeds(),
         getFieldRelativeChassisSpeeds(),
         getImuSample(),
@@ -126,28 +130,64 @@ public final class TerrainAwareSwerveSimulation implements DriveSimulationAdapte
   private void invalidateCachedTerrainState() {
     lastSampleTimestampSec = Double.NaN;
     cachedSample = null;
+    cachedChassisState = null;
     rollRateRadPerSec = 0.0;
     pitchRateRadPerSec = 0.0;
   }
 
   public synchronized TerrainSample getTerrainSample() {
+    sampleChassisState();
+    return cachedSample;
+  }
+
+  private ChassisState3d sampleChassisState() {
     double now = clockSecondsSupplier.getAsDouble();
-    if (cachedSample != null && Math.abs(now - lastSampleTimestampSec) < 1e-6) {
-      return cachedSample;
+    if (cachedChassisState != null && Math.abs(now - lastSampleTimestampSec) < 1e-6) {
+      return cachedChassisState;
     }
 
     TerrainSample newSample = terrainModel.sample(getPose2d());
+    ChassisSpeeds fieldRelativeChassisSpeeds = getFieldRelativeChassisSpeeds();
+    Translation3d previousFieldVelocity =
+        cachedChassisState == null
+            ? new Translation3d()
+            : cachedChassisState.fieldRelativeLinearVelocityMetersPerSec();
+    Translation3d fieldVelocity =
+        new Translation3d(
+            fieldRelativeChassisSpeeds.vxMetersPerSecond,
+            fieldRelativeChassisSpeeds.vyMetersPerSecond,
+            0.0);
+    Translation3d fieldAcceleration = new Translation3d();
     if (cachedSample != null && Double.isFinite(lastSampleTimestampSec)) {
       double dt = now - lastSampleTimestampSec;
       if (dt > 1e-5) {
         rollRateRadPerSec = (newSample.rollRadians() - cachedSample.rollRadians()) / dt;
         pitchRateRadPerSec = (newSample.pitchRadians() - cachedSample.pitchRadians()) / dt;
+        fieldVelocity =
+            new Translation3d(
+                fieldRelativeChassisSpeeds.vxMetersPerSecond,
+                fieldRelativeChassisSpeeds.vyMetersPerSecond,
+                (newSample.heightMeters() - cachedSample.heightMeters()) / dt);
+        fieldAcceleration =
+            new Translation3d(
+                (fieldVelocity.getX() - previousFieldVelocity.getX()) / dt,
+                (fieldVelocity.getY() - previousFieldVelocity.getY()) / dt,
+                (fieldVelocity.getZ() - previousFieldVelocity.getZ()) / dt);
       }
     }
 
     cachedSample = newSample;
+    cachedChassisState =
+        new ChassisState3d(
+            newSample.pose3d(),
+            fieldVelocity,
+            fieldAcceleration,
+            new AngularVelocity3d(
+                rollRateRadPerSec,
+                pitchRateRadPerSec,
+                getRobotRelativeChassisSpeeds().omegaRadiansPerSecond));
     lastSampleTimestampSec = now;
-    return cachedSample;
+    return cachedChassisState;
   }
 
   public synchronized double getRollRateRadPerSec() {

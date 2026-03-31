@@ -15,6 +15,8 @@ public interface DriveSimulationAdapter {
 
   Pose3d getPose3d();
 
+  ChassisState3d getChassisState3d();
+
   ChassisSpeeds getRobotRelativeChassisSpeeds();
 
   ChassisSpeeds getFieldRelativeChassisSpeeds();

@@ -8,6 +8,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 public record DriveSimulationState(
     Pose2d pose2d,
     Pose3d pose3d,
+    ChassisState3d chassisState3d,
     ChassisSpeeds robotRelativeChassisSpeeds,
     ChassisSpeeds fieldRelativeChassisSpeeds,
     SimImuSample imuSample,

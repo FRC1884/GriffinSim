@@ -42,6 +42,11 @@ class TerrainAwareSwerveSimulationTest {
     assertEquals(backend.pose, state.pose2d());
     assertEquals(backend.robotRelativeSpeeds, state.robotRelativeChassisSpeeds());
     assertEquals(backend.fieldRelativeSpeeds, state.fieldRelativeChassisSpeeds());
+    assertEquals(0.0, state.chassisState3d().angularVelocityRadPerSec().rollRateRadPerSec(), 1e-9);
+    assertEquals(0.0, state.chassisState3d().angularVelocityRadPerSec().pitchRateRadPerSec(), 1e-9);
+    assertEquals(0.8, state.chassisState3d().angularVelocityRadPerSec().yawRateRadPerSec(), 1e-9);
+    assertEquals(1.6, state.chassisState3d().fieldRelativeLinearVelocityMetersPerSec().getX(), 1e-9);
+    assertEquals(0.0, state.chassisState3d().fieldRelativeLinearVelocityMetersPerSec().getZ(), 1e-9);
     assertEquals(0.42, state.pose3d().getZ(), 1e-9);
     assertEquals(0.8, state.imuSample().yawRateRadPerSec(), 1e-9);
     assertEquals(-0.07, state.terrainSample().pitchRadians(), 1e-9);
@@ -76,20 +81,26 @@ class TerrainAwareSwerveSimulationTest {
     backend.pose = new Pose2d(1.0, 0.5, Rotation2d.fromDegrees(15.0));
     timeSec.set(0.2);
     TerrainSample movedSample = simulation.getTerrainSample();
+    ChassisState3d movedState = simulation.getChassisState3d();
 
     assertEquals(5.0, simulation.getRollRateRadPerSec(), 1e-9);
     assertEquals(2.5, simulation.getPitchRateRadPerSec(), 1e-9);
     assertEquals(1.0, movedSample.heightMeters(), 1e-9);
+    assertEquals(5.0, movedState.fieldRelativeLinearVelocityMetersPerSec().getZ(), 1e-9);
+    assertEquals(25.0, movedState.fieldRelativeLinearAccelerationMetersPerSecSq().getZ(), 1e-9);
 
     simulation.resetState(
         new Pose2d(0.25, 0.0, new Rotation2d()), new ChassisSpeeds(2.0, 0.0, -1.0));
     timeSec.set(0.3);
 
     TerrainSample resetSample = simulation.getTerrainSample();
+    ChassisState3d resetState = simulation.getChassisState3d();
     assertEquals(0.0, simulation.getRollRateRadPerSec(), 1e-9);
     assertEquals(0.0, simulation.getPitchRateRadPerSec(), 1e-9);
     assertEquals(0.25, resetSample.heightMeters(), 1e-9);
     assertEquals(-1.0, simulation.getImuSample().yawRateRadPerSec(), 1e-9);
+    assertEquals(0.0, resetState.fieldRelativeLinearVelocityMetersPerSec().getZ(), 1e-9);
+    assertEquals(0.0, resetState.fieldRelativeLinearAccelerationMetersPerSecSq().getZ(), 1e-9);
   }
 
   private static final class FakeBackend implements SwerveDriveBackend {
