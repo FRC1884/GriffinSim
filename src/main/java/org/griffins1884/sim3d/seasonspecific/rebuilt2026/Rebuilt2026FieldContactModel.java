@@ -9,6 +9,8 @@ import edu.wpi.first.math.util.Units;
 import java.util.ArrayList;
 import java.util.List;
 import org.griffins1884.sim3d.ChassisFootprint;
+import org.griffins1884.sim3d.PlanarObstacleContactModel;
+import org.griffins1884.sim3d.PlanarObstacleContactSample;
 import org.griffins1884.sim3d.TerrainContactModel;
 import org.griffins1884.sim3d.TerrainContactSample;
 import org.griffins1884.sim3d.TerrainFeature;
@@ -22,7 +24,8 @@ import org.griffins1884.sim3d.integration.FieldMarkerSample;
  * <p>This encodes the traversable bump surfaces and trench underpass clearance windows as explicit field
  * geometry, without depending on any robot-season repository or deploy assets.
  */
-public final class Rebuilt2026FieldContactModel implements TerrainContactModel, FieldMarkerProvider {
+public final class Rebuilt2026FieldContactModel
+    implements TerrainContactModel, PlanarObstacleContactModel, FieldMarkerProvider {
   private static final double GRADIENT_SAMPLE_METERS = 0.02;
 
   private static final double FIELD_LENGTH_METERS = Units.inchesToMeters(650.12);
@@ -216,11 +219,78 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
     return markers.toArray(FieldMarkerSample[]::new);
   }
 
+  @Override
+  public PlanarObstacleContactSample[] samplePlanarObstacleContacts(
+      Translation2d point, double contactHeightMeters) {
+    if (contactHeightMeters < 0.0) {
+      return new PlanarObstacleContactSample[0];
+    }
+
+    List<PlanarObstacleContactSample> contacts = new ArrayList<>();
+    addPolygonContact(
+        contacts,
+        TerrainFeature.BLUE_HUB,
+        BLUE_HUB_FACE_CENTERS,
+        HUB_COLLISION_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addPolygonContact(
+        contacts,
+        TerrainFeature.RED_HUB,
+        RED_HUB_FACE_CENTERS,
+        HUB_COLLISION_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addRectContacts(
+        contacts,
+        TerrainFeature.BLUE_LEFT_TRENCH_EDGE,
+        blueLeftTrenchEdgeRegions(),
+        TRENCH_OPENING_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addRectContacts(
+        contacts,
+        TerrainFeature.BLUE_RIGHT_TRENCH_EDGE,
+        blueRightTrenchEdgeRegions(),
+        TRENCH_OPENING_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addRectContacts(
+        contacts,
+        TerrainFeature.RED_LEFT_TRENCH_EDGE,
+        redLeftTrenchEdgeRegions(),
+        TRENCH_OPENING_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addRectContacts(
+        contacts,
+        TerrainFeature.RED_RIGHT_TRENCH_EDGE,
+        redRightTrenchEdgeRegions(),
+        TRENCH_OPENING_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addRectContacts(
+        contacts,
+        TerrainFeature.BLUE_TOWER,
+        new RectRegion[] {blueTowerLeftWall(), blueTowerRightWall(), blueTowerBackWall()},
+        TOWER_UPRIGHT_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    addRectContacts(
+        contacts,
+        TerrainFeature.RED_TOWER,
+        new RectRegion[] {redTowerLeftWall(), redTowerRightWall(), redTowerBackWall()},
+        TOWER_UPRIGHT_HEIGHT_METERS,
+        point,
+        contactHeightMeters);
+    return contacts.toArray(PlanarObstacleContactSample[]::new);
+  }
+
   public TerrainFeature featureAt(Translation2d position) {
-    if (contains(BLUE_HUB_BOUNDS, position)) {
+    if (inHub(BLUE_HUB_BOUNDS, BLUE_HUB_FACE_CENTERS, position)) {
       return TerrainFeature.BLUE_HUB;
     }
-    if (contains(RED_HUB_BOUNDS, position)) {
+    if (inHub(RED_HUB_BOUNDS, RED_HUB_FACE_CENTERS, position)) {
       return TerrainFeature.RED_HUB;
     }
     if (inBlueTower(position)) {
@@ -334,6 +404,11 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
         && point.getY() <= region.maxY;
   }
 
+  private static boolean inHub(
+      RectRegion hubBounds, Translation2d[] hubFaceCenters, Translation2d point) {
+    return contains(hubBounds, point) && pointInPolygon(hubFaceCenters, point);
+  }
+
   private static boolean inTrenchEdge(RectRegion[] regions, Translation2d point) {
     for (RectRegion region : regions) {
       if (contains(region, point)) {
@@ -346,6 +421,113 @@ public final class Rebuilt2026FieldContactModel implements TerrainContactModel, 
   private static double normalizedProgress(double min, double max, double value) {
     double span = Math.max(max - min, 1e-9);
     return Math.max(0.0, Math.min(1.0, (value - min) / span));
+  }
+
+  private static boolean pointInPolygon(Translation2d[] polygon, Translation2d point) {
+    boolean inside = false;
+    for (int i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      Translation2d current = polygon[i];
+      Translation2d previous = polygon[j];
+      boolean crossesScanline =
+          (current.getY() > point.getY()) != (previous.getY() > point.getY());
+      if (!crossesScanline) {
+        continue;
+      }
+
+      double edgeCrossX =
+          ((previous.getX() - current.getX()) * (point.getY() - current.getY()))
+                  / (previous.getY() - current.getY())
+              + current.getX();
+      if (point.getX() < edgeCrossX) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  private static void addRectContacts(
+      List<PlanarObstacleContactSample> contacts,
+      TerrainFeature feature,
+      RectRegion[] regions,
+      double obstacleHeightMeters,
+      Translation2d point,
+      double contactHeightMeters) {
+    if (contactHeightMeters > obstacleHeightMeters) {
+      return;
+    }
+    for (RectRegion region : regions) {
+      addRectContactSamples(contacts, feature, region, obstacleHeightMeters, point);
+    }
+  }
+
+  private static void addRectContactSamples(
+      List<PlanarObstacleContactSample> contacts,
+      TerrainFeature feature,
+      RectRegion region,
+      double obstacleHeightMeters,
+      Translation2d point) {
+    if (!contains(region, point)) {
+      return;
+    }
+
+    double leftPenetration = point.getX() - region.minX;
+    double rightPenetration = region.maxX - point.getX();
+    double bottomPenetration = point.getY() - region.minY;
+    double topPenetration = region.maxY - point.getY();
+    contacts.add(
+        new PlanarObstacleContactSample(
+            feature, new Translation2d(-1.0, 0.0), Math.max(0.0, leftPenetration), obstacleHeightMeters));
+    contacts.add(
+        new PlanarObstacleContactSample(
+            feature, new Translation2d(1.0, 0.0), Math.max(0.0, rightPenetration), obstacleHeightMeters));
+    contacts.add(
+        new PlanarObstacleContactSample(
+            feature, new Translation2d(0.0, -1.0), Math.max(0.0, bottomPenetration), obstacleHeightMeters));
+    contacts.add(
+        new PlanarObstacleContactSample(
+            feature, new Translation2d(0.0, 1.0), Math.max(0.0, topPenetration), obstacleHeightMeters));
+  }
+
+  private static void addPolygonContact(
+      List<PlanarObstacleContactSample> contacts,
+      TerrainFeature feature,
+      Translation2d[] polygon,
+      double obstacleHeightMeters,
+      Translation2d point,
+      double contactHeightMeters) {
+    if (contactHeightMeters > obstacleHeightMeters || !pointInPolygon(polygon, point)) {
+      return;
+    }
+
+    boolean counterClockwise = signedPolygonArea(polygon) >= 0.0;
+    for (int i = 0; i < polygon.length; i++) {
+      Translation2d start = polygon[i];
+      Translation2d end = polygon[(i + 1) % polygon.length];
+      Translation2d edge = end.minus(start);
+      double edgeLength = edge.getNorm();
+      if (edgeLength <= 1e-9) {
+        continue;
+      }
+
+      Translation2d outwardNormal =
+          counterClockwise
+              ? new Translation2d(edge.getY() / edgeLength, -edge.getX() / edgeLength)
+              : new Translation2d(-edge.getY() / edgeLength, edge.getX() / edgeLength);
+      double penetration = -outwardNormal.dot(point.minus(start));
+      contacts.add(
+          new PlanarObstacleContactSample(
+              feature, outwardNormal, Math.max(0.0, penetration), obstacleHeightMeters));
+    }
+  }
+
+  private static double signedPolygonArea(Translation2d[] polygon) {
+    double areaTwice = 0.0;
+    for (int i = 0; i < polygon.length; i++) {
+      Translation2d current = polygon[i];
+      Translation2d next = polygon[(i + 1) % polygon.length];
+      areaTwice += (current.getX() * next.getY()) - (next.getX() * current.getY());
+    }
+    return areaTwice * 0.5;
   }
 
   private static double hubCenterXBlue() {

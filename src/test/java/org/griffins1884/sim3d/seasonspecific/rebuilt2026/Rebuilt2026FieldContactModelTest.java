@@ -122,6 +122,18 @@ class Rebuilt2026FieldContactModelTest {
   }
 
   @Test
+  void hubCollisionUsesFaceProfileInsteadOfFullBoundingBox() {
+    TerrainContactSample sample =
+        MODEL.sampleContact(
+            new Pose2d(Units.inchesToMeters(203.0), Units.inchesToMeters(180.0), new Rotation2d()),
+            new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
+
+    assertEquals(TerrainFeature.FLAT, sample.feature());
+    assertTrue(sample.traversableSurface());
+    assertTrue(sample.clearanceSatisfied());
+  }
+
+  @Test
   void bumpHeightChangesAcrossDepthNotAlongSpan() {
     double bumpCenterY = 5.525;
     double entryHeight =
@@ -168,5 +180,36 @@ class Rebuilt2026FieldContactModelTest {
 
     assertEquals(TerrainFeature.BLUE_LEFT_TRENCH_EDGE, sample.feature());
     assertFalse(sample.traversableSurface());
+  }
+
+  @Test
+  void allTrenchEndReturnBlockersAreModeledAsCollision() {
+    assertReturnCollision(
+        Rebuilt2026FieldContactModel.blueLeftTrenchEdgeRegions(),
+        TerrainFeature.BLUE_LEFT_TRENCH_EDGE);
+    assertReturnCollision(
+        Rebuilt2026FieldContactModel.blueRightTrenchEdgeRegions(),
+        TerrainFeature.BLUE_RIGHT_TRENCH_EDGE);
+    assertReturnCollision(
+        Rebuilt2026FieldContactModel.redLeftTrenchEdgeRegions(),
+        TerrainFeature.RED_LEFT_TRENCH_EDGE);
+    assertReturnCollision(
+        Rebuilt2026FieldContactModel.redRightTrenchEdgeRegions(),
+        TerrainFeature.RED_RIGHT_TRENCH_EDGE);
+  }
+
+  private void assertReturnCollision(
+      Rebuilt2026FieldContactModel.RectRegion[] edgeRegions, TerrainFeature expectedFeature) {
+    for (int i = 3; i <= 4; i++) {
+      Rebuilt2026FieldContactModel.RectRegion returnRegion = edgeRegions[i];
+      TerrainContactSample sample =
+          MODEL.sampleContact(
+              new Pose2d(returnRegion.centerX(), returnRegion.centerY(), new Rotation2d()),
+              new ChassisFootprint(0.9, 0.9, 0.45, 0.08));
+
+      assertEquals(expectedFeature, sample.feature());
+      assertFalse(sample.traversableSurface());
+      assertFalse(sample.clearanceSatisfied());
+    }
   }
 }
