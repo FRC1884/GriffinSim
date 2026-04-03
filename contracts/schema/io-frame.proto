@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package griffinsim.contracts.v1;
+
+message FrameHeader {
+  uint32 protocol_version = 1;
+  uint64 sim_time_nanos = 2;
+  uint32 step_id = 3;
+}
+
+message PwmOutput {
+  uint32 channel = 1;
+  double value = 2;
+}
+
+message EncoderInput {
+  uint32 channel = 1;
+  double position = 2;
+  double velocity = 3;
+}
+
+message ImuInput {
+  double yaw = 1;
+  double pitch = 2;
+  double roll = 3;
+  double yaw_rate = 4;
+  double pitch_rate = 5;
+  double roll_rate = 6;
+  double accel_x = 7;
+  double accel_y = 8;
+  double accel_z = 9;
+}
+
+message ActuatorFrame {
+  FrameHeader header = 1;
+  repeated PwmOutput pwm = 2;
+}
+
+message SensorFrame {
+  FrameHeader header = 1;
+  repeated EncoderInput encoders = 2;
+  ImuInput imu = 3;
+}

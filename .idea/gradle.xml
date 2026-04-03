@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleMigrationSettings" migrationVersion="1" />
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="gradleJvm" value="openjdk-21" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/apps" />
+            <option value="$PROJECT_DIR$/apps/replay-diff" />
+            <option value="$PROJECT_DIR$/apps/scenario-runner" />
+            <option value="$PROJECT_DIR$/compat" />
+            <option value="$PROJECT_DIR$/compat/legacy-griffinsim" />
+            <option value="$PROJECT_DIR$/compat/native-halsim-extension" />
+            <option value="$PROJECT_DIR$/modules" />
+            <option value="$PROJECT_DIR$/modules/deterministic-runtime" />
+            <option value="$PROJECT_DIR$/modules/frc-bridge" />
+            <option value="$PROJECT_DIR$/modules/physics-core" />
+            <option value="$PROJECT_DIR$/modules/rendering-spi" />
+            <option value="$PROJECT_DIR$/modules/sensor-emulation" />
+            <option value="$PROJECT_DIR$/modules/sim-contracts" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>

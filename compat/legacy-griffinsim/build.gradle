@@ -1,0 +1,64 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'org.griffins1884'
+version = '0.1.9'
+
+java {
+    withSourcesJar()
+}
+
+repositories {
+    maven {
+        url = uri("https://shenzhen-robotics-alliance.github.io/maple-sim/vendordep/repos/releases")
+    }
+}
+
+sourceSets {
+    main {
+        java.srcDirs = ["${rootProject.projectDir}/legacy/griffinsim-v0/src/main/java"]
+        resources.srcDirs = []
+    }
+    test {
+        java.srcDirs = ["${rootProject.projectDir}/legacy/griffinsim-v0/src/test/java"]
+        resources.srcDirs = []
+    }
+}
+
+dependencies {
+    implementation "edu.wpi.first.wpimath:wpimath-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpiutil:wpiutil-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpiunits:wpiunits-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.ntcore:ntcore-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "us.hebi.quickbuf:quickbuf-runtime:1.4"
+    implementation "org.ironmaple:maplesim-java:0.3.14"
+    implementation "org.dyn4j:dyn4j:5.0.2"
+    testImplementation "org.junit.jupiter:junit-jupiter:${rootProject.ext.junitVersion}"
+}
+
+tasks.named("test").configure {
+    useJUnitPlatform()
+}
+
+tasks.named("jar").configure {
+    archiveBaseName = "GriffinSim"
+}
+
+tasks.withType(Jar).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+publishing {
+    publications {
+        legacyGriffinSim(MavenPublication) {
+            artifactId = 'GriffinSim'
+            from components.java
+            pom {
+                name = 'GriffinSim'
+                description = 'Standalone 3D-oriented simulation library for FRC robot projects.'
+            }
+        }
+    }
+}

@@ -1,54 +1,88 @@
 # GriffinSim
 
-GriffinSim is a standalone simulator project for FRC drivetrain and field interaction work.
+GriffinSim is now a **deterministic FRC-compatible simulation monorepo**.
 
-The starting point in this repository is intentionally narrow:
-- a Java library that can plug into existing WPILib and Maple-based robot projects
-- shared terrain sampling and 3D pose state for simulation
-- the first compatibility layer needed to transition from planar simulation toward a true 6DOF stack
+The active repository no longer builds the legacy Maple-centric 2.5D simulator from the root. That implementation has been archived under `legacy/griffinsim-v0/` so the new work can enforce a process boundary, fixed-step scheduling, replayability, and contract-first development.
 
-The long-term direction is a desktop-only simulator with:
-- 6DOF chassis state
-- roll, pitch, and yaw dynamics
-- terrain-aware wheel loading and friction
-- field obstacle interaction
-- AdvantageScope-friendly 3D outputs
-- clean integration with autonomous code without changing robot-side control APIs
+## Active layout
 
-This repository is kept separate from robot code on purpose:
-- simulation work should not bloat roboRIO deploy artifacts
-- native or heavyweight desktop-only dependencies stay out of competition builds
-- simulator architecture can evolve on its own release cadence
-
-## Current Scope
-
-Today this repository contains:
-- a terrain-aware wrapper around Maple's `SwerveDriveSimulation`
-- backend abstractions that separate the public simulator API from Maple-specific types
-- shared `TerrainModel`, `TerrainSample`, `DriveSimulationState`, `ChassisState3d`, and `SimImuSample` contracts
-- the first reusable layer for feeding roll, pitch, height, and IMU state into simulation consumers
-- a first-class 3D chassis snapshot with pose, angular rates, and field-relative linear velocity and acceleration
-- a standalone 2026 rebuilt field contact model with explicit bump surfaces and trench underpass clearance checks
-- a quasi-static swerve load-transfer estimator that converts terrain/contact state into per-wheel normal force and traction capacity estimates
-- shared terrain-drive authority laws that robot repos can apply to module and steering response
-- a GriffinSim-owned 2026 Maple arena with hub, trench edge, tower, and border obstacles
-- default rebuilt-2026 robot profile values for chassis footprint and mass properties
-- integration helpers for holonomic autonomous libraries, visualization frames, static field markers, and repeatable 2026 auto scenarios
-
-That is not the final 6DOF engine yet. The phased roadmap is in [PHASE_PLAN.md](PHASE_PLAN.md).
+- `contracts/schema/` — versioned protocol schemas
+- `contracts/spec/` — architecture and determinism contracts
+- `docs/transformation/` — audit report, gap analysis, migration plan, and rewrite rationale
+- `modules/sim-contracts/` — deterministic frame and snapshot contracts plus binary codecs
+- `modules/deterministic-runtime/` — fixed-step scheduler, bounded queues, replay log, and diff logic
+- `modules/frc-bridge/` — control-host and WPILib lockstep bridge scaffolding
+- `apps/replay-diff/` — CLI for replay log comparison
+- `legacy/griffinsim-v0/` — archived pre-rebuild implementation; not part of the active build
 
 ## Build
 
 ```bash
-./gradlew build
+./gradlew test
 ```
 
-## Release And Integration
+## Current rebuilt capabilities
 
-- Versioning strategy: [VERSIONING.md](VERSIONING.md)
-- Robot-repo consumption guidance: [docs/ROBOT_INTEGRATION.md](docs/ROBOT_INTEGRATION.md)
-- Vendordep file: [vendordeps/GriffinSim.json](vendordeps/GriffinSim.json)
+- deterministic replay and diff-ready logs
+- bounded non-blocking bridge queues
+- lockstep and real-time host abstractions
+- season-aware rebuilt-2026 field contact presets
+- material-aware contact telemetry
+- multi-body, gamepiece, and multi-robot interaction scaffolding
+- external scenario loading from properties files
+- controller layers for PWM, 1D waypoint, 2D holonomic, pose, and velocity-aware pose scenarios
 
-## Early Integration Goal
+## Example scenarios
 
-Robot repositories should depend on GriffinSim only in desktop simulation configurations. Real hardware and deploy packaging should continue to use normal robot code paths with no simulator-specific assets copied to the roboRIO.
+- `scenarios/examples/two-robot-head-on.properties`
+- `scenarios/examples/holonomic-pose-controller.properties`
+- `scenarios/examples/velocity-pose-controller.properties`
+
+See also:
+- `docs/architecture/scenario-spec.md`
+- `docs/architecture/controller-layers.md`
+- `docs/milestone/rebuilt-platform-milestone.md`
+- `docs/milestone/release-process.md`
+
+## Release automation
+
+- `./gradlew releaseReadiness` — module/app verification suite
+- `./scripts/release_smoke.sh` — deterministic example-scenario smoke run
+- `./gradlew milestoneBundle` — zip milestone docs, contracts, scenarios, and scripts
+- `./gradlew releaseArtifacts` — stage milestone bundle + CLI distributions + checksums + manifest
+- `./gradlew nativeExtensionBundle` — package the HALSIM native extension scaffold
+- `./scripts/prepare_native_extension.sh` — stage the native extension scaffold bundle
+- `./scripts/build_native_extension_with_wpilib.sh` — build the native scaffold against WPILib HAL when local native deps are available
+- `./gradlew nativeWpilibValidation` — optional WPILib-linked native build + Java binding validation
+- `./scripts/validate_native_extension_with_wpilib.sh` — script wrapper for the WPILib-linked validation flow
+- `./scripts/stage_rebuilt_artifacts.sh` — local artifact staging helper
+- `./scripts/publish_rebuilt_artifacts.sh` — publish artifacts into a repo-local staging directory
+- `./scripts/prepare_rebuilt_release.sh` — end-to-end rebuilt-platform prep flow
+
+
+## Scenario runner CLI
+
+Run a properties-backed scenario for a fixed number of control ticks:
+
+```bash
+./gradlew :apps:scenario-runner:run --args="scenarios/examples/two-robot-head-on.properties 2 build/example-replay.bin"
+```
+
+This prints a summary of the final world state and optionally writes replay bytes to the output path.
+
+Compare replay outputs with:
+
+```bash
+./gradlew :apps:replay-diff:run --args="build/example-replay-a.bin build/example-replay-b.bin"
+```
+
+## Why the rebuild happened
+
+The archived system violated the target architecture in four fundamental ways:
+
+1. It depended on Maple and dyn4j instead of a process-separated authoritative simulator.
+2. It advanced simulation from wall-clock timestamps instead of deterministic lockstep.
+3. It had no HALSIM/WebSocket/IPC bridge, no replay log, and no schema-versioned transport.
+4. Rendering/integration concerns lived alongside simulation math instead of behind strict contracts.
+
+See `docs/transformation/griffinsim-audit-report.md` and `docs/transformation/original-vs-rebuilt.md` for the full rationale.

@@ -1,0 +1,68 @@
+import org.gradle.internal.os.OperatingSystem
+
+plugins {
+    id 'base'
+    id 'maven-publish'
+}
+
+group = 'org.griffins1884'
+version = rootProject.version
+
+def desktopClassifier = OperatingSystem.current().isMacOsX() ? 'osxuniversal'
+    : (OperatingSystem.current().isLinux() ? 'linuxx86-64' : 'windowsx86-64')
+def nativeLibraryName = OperatingSystem.current().isMacOsX() ? 'libgriffinsim-halsim-extension.dylib'
+    : (OperatingSystem.current().isLinux() ? 'libgriffinsim-halsim-extension.so' : 'griffinsim-halsim-extension.dll')
+def builtLibrary = rootProject.layout.projectDirectory.file("build/native-halsim-extension-wpilib/${nativeLibraryName}")
+
+tasks.register("buildWpilibNativeExtension", Exec) {
+    group = "build"
+    description = "Builds the WPILib-linked GriffinSim HALSIM native extension."
+    workingDir rootProject.projectDir
+    commandLine "bash", "scripts/build_native_extension_with_wpilib.sh"
+}
+
+tasks.register("nativeHalSimReleaseZip", Zip) {
+    group = "distribution"
+    description = "Packages the WPILib-linked GriffinSim HALSIM native extension for GradleRIO simulation consumption."
+    dependsOn tasks.named("buildWpilibNativeExtension")
+    archiveBaseName = "griffinsim-halsim-extension"
+    archiveVersion = project.version.toString()
+    archiveClassifier = desktopClassifier
+    destinationDirectory = layout.buildDirectory.dir("distributions")
+    from(builtLibrary) {
+        into ""
+    }
+}
+
+tasks.register("nativeHalSimDebugZip", Zip) {
+    group = "distribution"
+    description = "Packages the WPILib-linked GriffinSim HALSIM native extension for debug GradleRIO simulation consumption."
+    dependsOn tasks.named("buildWpilibNativeExtension")
+    archiveBaseName = "griffinsim-halsim-extension"
+    archiveVersion = project.version.toString()
+    archiveClassifier = "${desktopClassifier}debug"
+    destinationDirectory = layout.buildDirectory.dir("distributions")
+    from(builtLibrary) {
+        into ""
+    }
+}
+
+publishing {
+    publications {
+        nativeHalSim(MavenPublication) {
+            artifactId = 'griffinsim-halsim-extension'
+            artifact(tasks.named("nativeHalSimReleaseZip")) {
+                classifier = desktopClassifier
+                extension = 'zip'
+            }
+            artifact(tasks.named("nativeHalSimDebugZip")) {
+                classifier = "${desktopClassifier}debug"
+                extension = 'zip'
+            }
+            pom {
+                name = 'griffinsim-halsim-extension'
+                description = 'WPILib-linked GriffinSim HALSIM native extension packaged for GradleRIO desktop simulation.'
+            }
+        }
+    }
+}

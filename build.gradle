@@ -1,72 +1,181 @@
+import org.gradle.api.tasks.bundling.Zip
+import java.security.MessageDigest
+
 plugins {
-    id "java-library"
-    id "maven-publish"
+    id 'base'
 }
 
-group = findProperty("GROUP") ?: "org.griffins1884"
-version = findProperty("VERSION_NAME") ?: "0.1.0-SNAPSHOT"
-description = findProperty("POM_DESCRIPTION") ?: "Standalone 3D-oriented simulation library for FRC robot projects."
+group = findProperty('GROUP') ?: 'org.griffins1884'
+version = findProperty('VERSION_NAME') ?: '0.2.0-SNAPSHOT'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-    withSourcesJar()
-    withJavadocJar()
-}
+def wpilibVersion = findProperty('WPILIB_VERSION') ?: '2026.2.1'
 
-repositories {
+def configureCommonRepositories = {
     mavenLocal()
     mavenCentral()
     maven {
-        name = "frcHome"
-        def frcYear = "2026"
-        def wpilibHome = new File(System.getProperty("user.home"), "wpilib/" + frcYear + "/maven")
+        name = 'frcHome'
+        def frcYear = '2026'
+        def wpilibHome = new File(System.getProperty('user.home'), 'wpilib/' + frcYear + '/maven')
         url = wpilibHome.toURI()
     }
     maven {
-        name = "wpilibRelease"
-        url = uri("https://frcmaven.wpi.edu/artifactory/release/")
-    }
-    maven {
-        name = "mapleSim"
-        url = uri("https://shenzhen-robotics-alliance.github.io/maple-sim/vendordep/repos/releases")
+        name = 'wpilibRelease'
+        url = uri('https://frcmaven.wpi.edu/artifactory/release/')
     }
 }
 
-dependencies {
-    api "edu.wpi.first.wpimath:wpimath-java:2026.2.1"
-    api "edu.wpi.first.wpiutil:wpiutil-java:2026.2.1"
-    api "edu.wpi.first.wpiunits:wpiunits-java:2026.2.1"
-    api "edu.wpi.first.ntcore:ntcore-java:2026.2.1"
-    api "us.hebi.quickbuf:quickbuf-runtime:1.4"
-    api "org.ironmaple:maplesim-java:0.3.14"
-    api "org.dyn4j:dyn4j:5.0.2"
-    compileOnly "com.fasterxml.jackson.core:jackson-annotations:2.18.4"
-    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
-    testCompileOnly "com.fasterxml.jackson.core:jackson-annotations:2.18.4"
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+
+    repositories configureCommonRepositories
+
+    plugins.withId('java') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(17)
+            }
+            withSourcesJar()
+        }
+
+        tasks.withType(Test).configureEach {
+            useJUnitPlatform()
+        }
+    }
 }
 
-test {
-    useJUnitPlatform()
+ext {
+    junitVersion = '5.11.4'
+    currentWpilibVersion = wpilibVersion
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-            artifactId = "GriffinSim"
 
-            pom {
-                name = findProperty("POM_NAME") ?: "GriffinSim"
-                description = project.description
+tasks.register("releaseReadiness") {
+    group = "verification"
+    description = "Runs rebuilt-platform verification tasks across modules and apps."
+    dependsOn(
+        ":modules:sim-contracts:test",
+        ":modules:deterministic-runtime:test",
+        ":modules:frc-bridge:test",
+        ":modules:physics-core:test",
+        ":modules:sensor-emulation:test",
+        ":modules:rendering-spi:test",
+        ":apps:scenario-runner:test",
+        ":apps:replay-diff:test"
+    )
+}
+
+tasks.register("milestoneBundle", Zip) {
+    group = "distribution"
+    description = "Packages milestone docs, example scenarios, and CLI metadata for the rebuilt platform."
+    archiveBaseName = "GriffinSim-rebuilt-platform"
+    archiveVersion = project.version.toString()
+    destinationDirectory = layout.buildDirectory.dir("distributions")
+
+    from("README.md")
+    from("docs")
+    from("contracts")
+    from("scenarios")
+    from("scripts") {
+        include("release_smoke.sh", "prepare_rebuilt_release.sh")
+    }
+}
+
+
+tasks.register("releaseArtifacts") {
+    group = "distribution"
+    description = "Stages rebuilt-platform release artifacts, checksums, and a manifest under build/release-artifacts."
+    dependsOn(
+        "milestoneBundle",
+        "nativeExtensionBundle",
+        ":apps:scenario-runner:distZip",
+        ":apps:replay-diff:distZip"
+    )
+
+    doLast {
+        def outputDir = layout.buildDirectory.dir("release-artifacts").get().asFile
+        project.delete(outputDir)
+        outputDir.mkdirs()
+
+        def artifacts = [
+            tasks.named("milestoneBundle").get().archiveFile.get().asFile,
+            tasks.named("nativeExtensionBundle").get().archiveFile.get().asFile,
+            project(":apps:scenario-runner").tasks.named("distZip").get().archiveFile.get().asFile,
+            project(":apps:replay-diff").tasks.named("distZip").get().archiveFile.get().asFile,
+        ]
+
+        artifacts.each { file ->
+            copy {
+                from file
+                into outputDir
             }
         }
-    }
-    repositories {
-        maven {
-            name = "githubStatic"
-            url = layout.projectDirectory.dir("maven-repo")
+
+        def nativeBinDir = new File(outputDir, "native-bin")
+        nativeBinDir.mkdirs()
+        def osName = System.getProperty("os.name", "").toLowerCase()
+        def nativeLibraryName = osName.contains("mac") ? "libgriffinsim-halsim-extension.dylib" : (osName.contains("win") ? "griffinsim-halsim-extension.dll" : "libgriffinsim-halsim-extension.so")
+        def builtNative = new File(project.projectDir, "build/native-halsim-extension/${nativeLibraryName}")
+        if (builtNative.exists()) {
+            copy {
+                from builtNative
+                into nativeBinDir
+            }
         }
+        def builtNativeWpilib = new File(project.projectDir, "build/native-halsim-extension-wpilib/${nativeLibraryName}")
+        if (builtNativeWpilib.exists()) {
+            copy {
+                from builtNativeWpilib
+                into nativeBinDir
+            }
+        }
+
+        def manifestEntries = []
+        artifacts.collect { new File(outputDir, it.name) }.sort { a, b -> a.name <=> b.name }.each { file ->
+            def digest = MessageDigest.getInstance("SHA-256")
+            file.withInputStream { input ->
+                byte[] buffer = new byte[8192]
+                int read
+                while ((read = input.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            def hex = digest.digest().collect { String.format("%02x", it) }.join("")
+            new File(outputDir, file.name + ".sha256").text = hex + "  " + file.name + System.lineSeparator()
+            manifestEntries << [name: file.name, sha256: hex, bytes: file.length()]
+        }
+
+        def manifest = new File(outputDir, "release-manifest.json")
+        manifest.text = groovy.json.JsonOutput.prettyPrint(
+            groovy.json.JsonOutput.toJson([
+                project: rootProject.name,
+                version: project.version.toString(),
+                artifacts: manifestEntries,
+            ])
+        ) + System.lineSeparator()
+    }
+}
+
+
+tasks.register("nativeExtensionBundle", Zip) {
+    group = "distribution"
+    description = "Packages the GriffinSim HALSIM native extension scaffold."
+    archiveBaseName = "GriffinSim-native-halsim-extension"
+    archiveVersion = project.version.toString()
+    destinationDirectory = layout.buildDirectory.dir("distributions")
+
+    from("native/halsim-extension")
+    from("docs/architecture/native-halsim-extension.md")
+    from("docs/milestone/native-extension-plan.md")
+}
+
+
+tasks.register("nativeWpilibValidation", Exec) {
+    group = "verification"
+    description = "Builds and validates the WPILib-linked native extension when native HAL paths are provided."
+    commandLine("bash", "scripts/validate_native_extension_with_wpilib.sh")
+    onlyIf {
+        System.getenv("GRIFFINSIM_WPILIB_HAL_INCLUDE_DIR") && System.getenv("GRIFFINSIM_WPILIB_HAL_LIBRARY")
     }
 }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="17" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="GriffinSim.modules.frc-bridge" options="--add-modules jdk.incubator.foreign" />
+      <module name="GriffinSim.modules.frc-bridge.main" options="--add-modules jdk.incubator.foreign" />
+      <module name="GriffinSim.modules.frc-bridge.test" options="--add-modules jdk.incubator.foreign" />
+    </option>
+  </component>
+</project>

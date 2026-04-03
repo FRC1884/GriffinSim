@@ -1,0 +1,13 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':modules:sim-contracts')
+    implementation project(':modules:deterministic-runtime')
+    testImplementation "org.junit.jupiter:junit-jupiter:${rootProject.ext.junitVersion}"
+}
+
+application {
+    mainClass = 'org.griffins1884.griffinsim.tools.ReplayDiffMain'
+}

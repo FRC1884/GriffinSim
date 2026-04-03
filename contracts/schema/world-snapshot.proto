@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package griffinsim.contracts.v1;
+
+message RigidBodyState {
+  string body_id = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+  double qw = 5;
+  double qx = 6;
+  double qy = 7;
+  double qz = 8;
+  double vx = 9;
+  double vy = 10;
+  double vz = 11;
+  double wx = 12;
+  double wy = 13;
+  double wz = 14;
+}
+
+message WorldSnapshot {
+  FrameHeader header = 1;
+  repeated RigidBodyState bodies = 2;
+}

@@ -1,0 +1,25 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api project(':modules:sim-contracts')
+    implementation project(':modules:deterministic-runtime')
+    implementation project(':modules:physics-core')
+    implementation project(':modules:sensor-emulation')
+    implementation "edu.wpi.first.wpilibj:wpilibj-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.hal:hal-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpiutil:wpiutil-java:${rootProject.ext.currentWpilibVersion}"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:2.18.4"
+    testImplementation "org.junit.jupiter:junit-jupiter:${rootProject.ext.junitVersion}"
+}
+
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ["--add-modules", "jdk.incubator.foreign"]
+}
+
+tasks.withType(Test).configureEach {
+    jvmArgs += ["--add-modules", "jdk.incubator.foreign", "--enable-native-access=ALL-UNNAMED"]
+    systemProperty "griffinsim.testRuntimeClasspath", sourceSets.test.runtimeClasspath.asPath
+}

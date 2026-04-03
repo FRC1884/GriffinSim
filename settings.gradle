@@ -1,1 +1,13 @@
-rootProject.name = "GriffinSim"
+rootProject.name = 'GriffinSim'
+
+include ':modules:sim-contracts'
+include ':modules:deterministic-runtime'
+include ':modules:frc-bridge'
+include ':modules:physics-core'
+include ':modules:sensor-emulation'
+include ':modules:rendering-spi'
+include ':apps:replay-diff'
+include ':compat:legacy-griffinsim'
+include ':compat:native-halsim-extension'
+
+include ':apps:scenario-runner'
