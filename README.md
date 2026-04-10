@@ -45,6 +45,9 @@ The active repository no longer builds the legacy Maple-centric 2.5D simulator f
 See also:
 - `docs/architecture/scenario-spec.md`
 - `docs/architecture/controller-layers.md`
+- `docs/architecture/lockstep-bridge.md`
+- `docs/architecture/native-halsim-extension.md`
+- `legacy/griffinsim-v0/docs/ROBOT_INTEGRATION.md`
 - `docs/milestone/rebuilt-platform-milestone.md`
 - `docs/milestone/release-process.md`
 
