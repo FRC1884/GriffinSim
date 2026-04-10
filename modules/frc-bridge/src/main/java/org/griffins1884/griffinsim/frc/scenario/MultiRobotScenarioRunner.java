@@ -5,14 +5,18 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.griffins1884.griffinsim.contracts.WorldSnapshot;
 import org.griffins1884.griffinsim.frc.MultiRobotCoSimulationLoop;
 import org.griffins1884.griffinsim.physics.DeterministicPhysicsWorld;
+import org.griffins1884.griffinsim.rendering.HeadlessRendererSession;
 import org.griffins1884.griffinsim.runtime.ReplayLogWriter;
 
 public final class MultiRobotScenarioRunner {
   public MultiRobotRunResult run(MultiRobotScenario scenario, int ticks) {
     try (ByteArrayOutputStream output = new ByteArrayOutputStream();
         ReplayLogWriter replayLogWriter = new ReplayLogWriter(output)) {
+      List<WorldSnapshot> worldSnapshots = new ArrayList<>();
+      HeadlessRendererSession rendererSession = new HeadlessRendererSession();
       MultiRobotCoSimulationLoop loop =
           new MultiRobotCoSimulationLoop(
               scenario.controlHostConfig(),
@@ -20,14 +24,20 @@ public final class MultiRobotScenarioRunner {
               new DeterministicPhysicsWorld(),
               scenario.endpoints(),
               scenario.contactGenerator(),
-              replayLogWriter);
+              replayLogWriter,
+              List.of(worldSnapshots::add, rendererSession));
       List<org.griffins1884.griffinsim.contracts.ContactTelemetryFrame> telemetryFrames = new ArrayList<>();
       for (int i = 0; i < ticks; i++) {
         loop.advanceOneTick();
         telemetryFrames.add(loop.lastContactTelemetryFrame());
       }
       replayLogWriter.close();
-      return new MultiRobotRunResult(loop.currentWorldState(), telemetryFrames, output.toByteArray());
+      return new MultiRobotRunResult(
+          loop.currentWorldState(),
+          telemetryFrames,
+          worldSnapshots,
+          rendererSession.snapshotCount(),
+          output.toByteArray());
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

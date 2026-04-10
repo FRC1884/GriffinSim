@@ -15,6 +15,8 @@ class MultiRobotScenarioRunnerTest {
     MultiRobotRunResult second = runner.run(MultiRobotScenarioFixtures.twoRobotHeadOn(), 2);
 
     assertEquals(first.finalWorldState(), second.finalWorldState());
+    assertEquals(first.worldSnapshots(), second.worldSnapshots());
+    assertEquals(first.renderedSnapshotCount(), second.renderedSnapshotCount());
     assertArrayEquals(first.replayBytes(), second.replayBytes());
   }
 
@@ -25,5 +27,7 @@ class MultiRobotScenarioRunnerTest {
     var gamepiece = result.finalWorldState().bodies().stream().filter(body -> body.bodyId().equals("gamepiece")).findFirst().orElseThrow();
     assertTrue(gamepiece.x() > 0.3 || gamepiece.y() != 0.0 || gamepiece.z() != 0.0);
     assertTrue(result.contactTelemetryFrames().stream().flatMap(frame -> frame.contacts().stream()).anyMatch(contact -> contact.contactId().contains("vs:gamepiece") || contact.contactId().contains("vs:robot")));
+    assertEquals(5, result.worldSnapshots().size());
+    assertEquals(5, result.renderedSnapshotCount());
   }
 }

@@ -54,10 +54,10 @@ public final class LockstepControlHost {
 
   public ActuatorFrame runOneTick() {
     ScheduledTick tick = scheduler.nextTick();
-    selectSensorFrameFor(tick.stepId()).ifPresent(frame -> {
+    for (SensorFrame frame : selectSensorFramesFor(tick.stepId())) {
       sensorApplicator.apply(frame);
       lastAppliedSensorStep = frame.header().stepId();
-    });
+    }
 
     if (config.clockMode() == ClockMode.LOCKSTEP) {
       timeController.stepSeconds(config.controlStepNanos() / 1_000_000_000.0);
@@ -77,9 +77,9 @@ public final class LockstepControlHost {
     return outboundActuatorFrames.poll();
   }
 
-  private Optional<SensorFrame> selectSensorFrameFor(int controlStepId) {
+  private List<SensorFrame> selectSensorFramesFor(int controlStepId) {
     List<SensorFrame> futureFrames = new ArrayList<>();
-    SensorFrame newestApplicable = null;
+    List<SensorFrame> applicable = new ArrayList<>();
     Optional<SensorFrame> next;
     while ((next = inboundSensorFrames.poll()).isPresent()) {
       SensorFrame frame = next.orElseThrow();
@@ -88,7 +88,7 @@ public final class LockstepControlHost {
         continue;
       }
       if (stepId <= controlStepId) {
-        newestApplicable = frame;
+        applicable.add(frame);
       } else {
         futureFrames.add(frame);
       }
@@ -99,6 +99,9 @@ public final class LockstepControlHost {
         throw new IllegalStateException("Sensor queue overflow while restoring future frames");
       }
     }
-    return Optional.ofNullable(newestApplicable);
+    applicable.sort(
+        java.util.Comparator.comparingInt((SensorFrame frame) -> frame.header().stepId())
+            .thenComparingInt(frame -> frame.encoders().isEmpty() ? Integer.MAX_VALUE : frame.encoders().get(0).channel()));
+    return applicable;
   }
 }

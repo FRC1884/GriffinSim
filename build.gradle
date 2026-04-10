@@ -6,7 +6,7 @@ plugins {
 }
 
 group = findProperty('GROUP') ?: 'org.griffins1884'
-version = findProperty('VERSION_NAME') ?: '0.2.0-SNAPSHOT'
+version = findProperty('VERSION_NAME') ?: '0.2.0'
 
 def wpilibVersion = findProperty('WPILIB_VERSION') ?: '2026.2.1'
 
@@ -62,8 +62,15 @@ tasks.register("releaseReadiness") {
         ":modules:sensor-emulation:test",
         ":modules:rendering-spi:test",
         ":apps:scenario-runner:test",
-        ":apps:replay-diff:test"
+        ":apps:replay-diff:test",
+        ":apps:wpilib-harness:test"
     )
+}
+
+tasks.register("runWpilibHarness") {
+    group = "application"
+    description = "Launches the real WPILib desktop harness against GriffinSim."
+    dependsOn(":apps:wpilib-harness:run")
 }
 
 tasks.register("milestoneBundle", Zip) {

@@ -12,6 +12,10 @@ The active repository no longer builds the legacy Maple-centric 2.5D simulator f
 - `modules/sim-contracts/` — deterministic frame and snapshot contracts plus binary codecs
 - `modules/deterministic-runtime/` — fixed-step scheduler, bounded queues, replay log, and diff logic
 - `modules/frc-bridge/` — control-host and WPILib lockstep bridge scaffolding
+- `modules/physics-core/` — authoritative rigid-body/contact stepping scaffold, field presets, and actuator-command mappers
+- `modules/sensor-emulation/` — deterministic sensor pipelines with seeded noise and latency
+- `modules/rendering-spi/` — subscriber-only render interfaces exercised by scenario execution
+- `apps/scenario-runner/` — CLI for deterministic scenario execution
 - `apps/replay-diff/` — CLI for replay log comparison
 - `legacy/griffinsim-v0/` — archived pre-rebuild implementation; not part of the active build
 
@@ -44,7 +48,7 @@ See also:
 - `docs/milestone/rebuilt-platform-milestone.md`
 - `docs/milestone/release-process.md`
 
-## Release automation
+## Release workflow
 
 - `./gradlew releaseReadiness` — module/app verification suite
 - `./scripts/release_smoke.sh` — deterministic example-scenario smoke run
@@ -69,6 +73,7 @@ Run a properties-backed scenario for a fixed number of control ticks:
 ```
 
 This prints a summary of the final world state and optionally writes replay bytes to the output path.
+It also reports how many authoritative world snapshots were emitted and consumed by the headless renderer subscriber during the run.
 
 Compare replay outputs with:
 

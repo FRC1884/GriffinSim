@@ -1,3 +1,5 @@
 .gradle/
 build/
 .omx/
+**/build/
+networktables.json

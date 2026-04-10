@@ -7,6 +7,7 @@ dependencies {
     implementation project(':modules:deterministic-runtime')
     implementation project(':modules:physics-core')
     implementation project(':modules:sensor-emulation')
+    implementation project(':modules:rendering-spi')
     implementation "edu.wpi.first.wpilibj:wpilibj-java:${rootProject.ext.currentWpilibVersion}"
     implementation "edu.wpi.first.hal:hal-java:${rootProject.ext.currentWpilibVersion}"
     implementation "edu.wpi.first.wpiutil:wpiutil-java:${rootProject.ext.currentWpilibVersion}"

@@ -49,6 +49,8 @@ public final class ScenarioRunnerMain {
       System.out.println("ticks=" + ticks);
       System.out.println("bodies=" + result.finalWorldState().bodies().size());
       System.out.println("contact_frames=" + result.contactTelemetryFrames().size());
+      System.out.println("world_snapshots=" + result.worldSnapshots().size());
+      System.out.println("rendered_snapshots=" + result.renderedSnapshotCount());
       for (var body : result.finalWorldState().bodies()) {
         System.out.println(
             body.bodyId()

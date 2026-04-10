@@ -1,0 +1,80 @@
+plugins {
+    id 'application'
+}
+
+def osName = System.getProperty('os.name', '').toLowerCase()
+def nativeLibVariable = osName.contains('mac') ? 'DYLD_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
+def nativePlatformDir = osName.contains('mac') ? 'osx/universal/shared' : 'linux/x86-64/shared'
+def nativeArchiveClassifier = osName.contains('mac') ? 'osxuniversal' : 'linuxx86-64'
+def wpilibHome = new File(System.getProperty('user.home'), "wpilib/2026/maven/edu/wpi/first")
+def wpilibNativeRoot = layout.buildDirectory.dir("wpilib-desktop-runtime/${rootProject.ext.currentWpilibVersion}/native")
+def wpilibNativeDirProvider = wpilibNativeRoot.map { it.dir(nativePlatformDir).asFile }
+
+tasks.register("prepareWpilibDesktopRuntime") {
+    outputs.dir(wpilibNativeRoot)
+
+    doLast {
+        def archiveDir = wpilibNativeRoot.get().asFile
+        project.delete(archiveDir)
+        archiveDir.mkdirs()
+
+        def archives = [
+            new File(wpilibHome, "wpiutil/wpiutil-cpp/${rootProject.ext.currentWpilibVersion}/wpiutil-cpp-${rootProject.ext.currentWpilibVersion}-${nativeArchiveClassifier}.zip"),
+            new File(wpilibHome, "wpinet/wpinet-cpp/${rootProject.ext.currentWpilibVersion}/wpinet-cpp-${rootProject.ext.currentWpilibVersion}-${nativeArchiveClassifier}.zip"),
+            new File(wpilibHome, "ntcore/ntcore-cpp/${rootProject.ext.currentWpilibVersion}/ntcore-cpp-${rootProject.ext.currentWpilibVersion}-${nativeArchiveClassifier}.zip"),
+            new File(wpilibHome, "hal/hal-cpp/${rootProject.ext.currentWpilibVersion}/hal-cpp-${rootProject.ext.currentWpilibVersion}-${nativeArchiveClassifier}.zip"),
+        ]
+
+        archives.each { archive ->
+            if (!archive.exists()) {
+                throw new GradleException("Missing WPILib desktop runtime archive: ${archive}")
+            }
+            copy {
+                from zipTree(archive)
+                into archiveDir
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation project(':modules:frc-bridge')
+    implementation project(':modules:physics-core')
+    implementation project(':modules:sim-contracts')
+    implementation project(':modules:deterministic-runtime')
+    implementation project(':modules:sensor-emulation')
+    implementation "edu.wpi.first.cameraserver:cameraserver-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.cscore:cscore-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpilibj:wpilibj-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.hal:hal-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.ntcore:ntcore-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpimath:wpimath-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpinet:wpinet-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "edu.wpi.first.wpiutil:wpiutil-java:${rootProject.ext.currentWpilibVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.18.4"
+    testImplementation "org.junit.jupiter:junit-jupiter:${rootProject.ext.junitVersion}"
+}
+
+application {
+    mainClass = 'org.griffins1884.griffinsim.tools.WpilibHarnessMain'
+}
+
+tasks.withType(Test).configureEach {
+    dependsOn("prepareWpilibDesktopRuntime")
+    jvmArgs += ["--add-modules", "jdk.incubator.foreign", "--enable-native-access=ALL-UNNAMED"]
+    doFirst {
+        def wpilibNativeDir = wpilibNativeDirProvider.get()
+        jvmArgs += ["-Djava.library.path=${wpilibNativeDir.absolutePath}"]
+        environment nativeLibVariable, wpilibNativeDir.absolutePath
+    }
+}
+
+tasks.named("run") {
+    dependsOn("prepareWpilibDesktopRuntime")
+    jvmArgs += ["--add-modules", "jdk.incubator.foreign", "--enable-native-access=ALL-UNNAMED"]
+    doFirst {
+        def wpilibNativeDir = wpilibNativeDirProvider.get()
+        jvmArgs += ["-Djava.library.path=${wpilibNativeDir.absolutePath}"]
+        environment nativeLibVariable, wpilibNativeDir.absolutePath
+    }
+}

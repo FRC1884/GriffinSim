@@ -5,10 +5,11 @@
 - `modules/sim-contracts`: immutable transport and snapshot contracts
 - `modules/deterministic-runtime`: fixed-step scheduling, bounded queues, replay log infrastructure
 - `modules/frc-bridge`: control-host orchestration and WPILib lockstep hooks
-- `modules/physics-core` (planned): authoritative rigid-body/contact solver
-- `modules/sensor-emulation` (planned): deterministic sensor pipelines
-- `modules/rendering-spi` (planned): subscriber-only render interfaces
+- `modules/physics-core`: authoritative rigid-body/contact stepping scaffold, field presets, and actuator-command mappers
+- `modules/sensor-emulation`: deterministic sensor pipelines with seeded noise and latency queues
+- `modules/rendering-spi`: subscriber-only render interfaces used by scenario execution
 - `apps/replay-diff`: deterministic replay comparison CLI
+- `apps/scenario-runner`: deterministic scenario execution CLI
 
 ## Determinism rules
 

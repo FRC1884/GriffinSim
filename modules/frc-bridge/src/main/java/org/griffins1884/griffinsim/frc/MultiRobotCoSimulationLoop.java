@@ -17,6 +17,7 @@ import org.griffins1884.griffinsim.physics.DeterministicPhysicsWorld;
 import org.griffins1884.griffinsim.physics.ImmutableWorldState;
 import org.griffins1884.griffinsim.physics.PhysicsStepRequest;
 import org.griffins1884.griffinsim.physics.WorldSnapshots;
+import org.griffins1884.griffinsim.rendering.WorldSnapshotSubscriber;
 import org.griffins1884.griffinsim.runtime.ReplayLogWriter;
 
 public final class MultiRobotCoSimulationLoop {
@@ -25,6 +26,7 @@ public final class MultiRobotCoSimulationLoop {
   private final List<MultiRobotEndpoint> endpoints;
   private final ContactGenerator contactGenerator;
   private final ReplayLogWriter replayLogWriter;
+  private final List<WorldSnapshotSubscriber> snapshotSubscribers;
   private ImmutableWorldState currentWorldState;
   private List<ContactEvent> lastContactEvents;
   private ContactTelemetryFrame lastContactTelemetryFrame;
@@ -36,6 +38,17 @@ public final class MultiRobotCoSimulationLoop {
       List<MultiRobotEndpoint> endpoints,
       ContactGenerator contactGenerator,
       ReplayLogWriter replayLogWriter) {
+    this(config, initialWorldState, physicsWorld, endpoints, contactGenerator, replayLogWriter, List.of());
+  }
+
+  public MultiRobotCoSimulationLoop(
+      ControlHostConfig config,
+      ImmutableWorldState initialWorldState,
+      DeterministicPhysicsWorld physicsWorld,
+      List<MultiRobotEndpoint> endpoints,
+      ContactGenerator contactGenerator,
+      ReplayLogWriter replayLogWriter,
+      List<WorldSnapshotSubscriber> snapshotSubscribers) {
     this.config = Objects.requireNonNull(config);
     this.currentWorldState = Objects.requireNonNull(initialWorldState);
     this.physicsWorld = Objects.requireNonNull(physicsWorld);
@@ -45,6 +58,8 @@ public final class MultiRobotCoSimulationLoop {
             .toList());
     this.contactGenerator = Objects.requireNonNull(contactGenerator);
     this.replayLogWriter = replayLogWriter;
+    this.snapshotSubscribers =
+        List.copyOf(snapshotSubscribers == null ? List.of() : snapshotSubscribers);
     this.lastContactEvents = List.of();
     this.lastContactTelemetryFrame = new ContactTelemetryFrame(initialWorldState.header(), List.of());
   }
@@ -63,13 +78,19 @@ public final class MultiRobotCoSimulationLoop {
 
   public ImmutableWorldState advanceOneTick() {
     WorldSnapshot worldSnapshot = WorldSnapshots.fromWorldState(currentWorldState);
+    for (WorldSnapshotSubscriber subscriber : snapshotSubscribers) {
+      subscriber.onWorldSnapshot(worldSnapshot);
+    }
     for (MultiRobotEndpoint endpoint : endpoints) {
-      endpoint.sensorEmulator().observe(worldSnapshot);
-      List<SensorFrame> sensorFrames = endpoint.sensorEmulator().releaseReady(worldSnapshot.header().simTimeNanos());
-      for (SensorFrame sensorFrame : sensorFrames) {
-        endpoint.controlHost().enqueueSensorFrame(sensorFrame);
-        if (replayLogWriter != null) {
-          replayLogWriter.appendSensorFrame(sensorFrame);
+      for (var sensorEmitter : endpoint.sensorEmitters()) {
+        sensorEmitter.observe(worldSnapshot);
+        List<SensorFrame> sensorFrames =
+            sensorEmitter.releaseReady(worldSnapshot.header().simTimeNanos());
+        for (SensorFrame sensorFrame : sensorFrames) {
+          endpoint.controlHost().enqueueSensorFrame(sensorFrame);
+          if (replayLogWriter != null) {
+            replayLogWriter.appendSensorFrame(sensorFrame);
+          }
         }
       }
     }
@@ -108,6 +129,7 @@ public final class MultiRobotCoSimulationLoop {
                   contactGenerator.generateContacts(currentWorldState)));
       currentWorldState = stepResult.worldState();
       lastContactEvents = stepResult.contactEvents();
+      WorldSnapshot authoritativeSnapshot = WorldSnapshots.fromWorldState(currentWorldState);
       lastContactTelemetryFrame =
           new ContactTelemetryFrame(
               stepHeader,
@@ -126,8 +148,11 @@ public final class MultiRobotCoSimulationLoop {
                           event.rollingFrictionCoefficient(),
                           event.torsionalFrictionCoefficient()))
                   .toList());
+      for (WorldSnapshotSubscriber subscriber : snapshotSubscribers) {
+        subscriber.onWorldSnapshot(authoritativeSnapshot);
+      }
       if (replayLogWriter != null) {
-        replayLogWriter.appendWorldSnapshot(WorldSnapshots.fromWorldState(currentWorldState));
+        replayLogWriter.appendWorldSnapshot(authoritativeSnapshot);
         replayLogWriter.appendContactTelemetryFrame(lastContactTelemetryFrame);
       }
     }

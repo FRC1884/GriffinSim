@@ -27,6 +27,7 @@ import org.griffins1884.sim3d.integration.FieldMarkerSample;
 public final class Rebuilt2026FieldContactModel
     implements TerrainContactModel, PlanarObstacleContactModel, FieldMarkerProvider {
   private static final double GRADIENT_SAMPLE_METERS = 0.02;
+  private static volatile boolean validationFlatTerrainOverride = false;
 
   private static final double FIELD_LENGTH_METERS = Units.inchesToMeters(650.12);
   private static final double FIELD_WIDTH_METERS = Units.inchesToMeters(316.64);
@@ -168,8 +169,23 @@ public final class Rebuilt2026FieldContactModel
 
   private Rebuilt2026FieldContactModel() {}
 
+  public static void setValidationFlatTerrainOverride(boolean enabled) {
+    validationFlatTerrainOverride = enabled;
+  }
+
   @Override
   public TerrainSample sample(Pose2d robotPose) {
+    if (validationFlatTerrainOverride) {
+      return new TerrainSample(
+          new Pose3d(
+              robotPose.getX(),
+              robotPose.getY(),
+              0.0,
+              new Rotation3d(0.0, 0.0, robotPose.getRotation().getRadians())),
+          0.0,
+          0.0,
+          0.0);
+    }
     Translation2d translation = robotPose.getTranslation();
     double z = bumpHeightMeters(translation);
     double[] gradient = terrainGradient(translation);
@@ -187,6 +203,17 @@ public final class Rebuilt2026FieldContactModel
 
   @Override
   public TerrainContactSample sampleContact(Pose2d robotPose, ChassisFootprint chassisFootprint) {
+    if (validationFlatTerrainOverride) {
+      TerrainSample terrainSample = sample(robotPose);
+      return new TerrainContactSample(
+          terrainSample,
+          TerrainFeature.FLAT,
+          Double.POSITIVE_INFINITY,
+          chassisFootprint.groundClearanceMeters(),
+          Double.POSITIVE_INFINITY,
+          true,
+          true);
+    }
     TerrainSample terrainSample = sample(robotPose);
     TerrainFeature feature = featureAt(robotPose.getTranslation());
     double overheadClearanceMeters = overheadClearanceMeters(feature);

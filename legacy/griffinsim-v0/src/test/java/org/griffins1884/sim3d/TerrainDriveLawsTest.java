@@ -34,7 +34,7 @@ class TerrainDriveLawsTest {
   }
 
   @Test
-  void steeringAuthorityRespondsToLoadButStaysPositiveOnTraversableTerrain() {
+  void steeringAuthorityStaysPositiveOnTraversableTerrain() {
     SwerveTractionState tractionState =
         new SwerveTractionState(
             new WheelLoadSample(120.0, 140.0, 1.2),
@@ -58,7 +58,7 @@ class TerrainDriveLawsTest {
             new TerrainContactSample(
                 TERRAIN_SAMPLE, TerrainFeature.BLUE_LEFT_BUMP, Double.POSITIVE_INFINITY, 0.1, 0.1, true, true));
 
-    assertTrue(frontLeftScale > frontRightScale);
+    assertEquals(frontLeftScale, frontRightScale, 1e-9);
     assertTrue(frontRightScale > 0.0);
   }
 

@@ -13,8 +13,7 @@ public final class TerrainDriveLaws {
       return 0.0;
     }
 
-    double normalizedLoad = clamp(tractionState.forCorner(corner).normalizedLoad(), 0.55, 1.35);
-    double driveScale = clamp(0.35 + (0.65 * normalizedLoad), 0.45, 1.25);
+    double driveScale = 1.0;
     if (contactSample == null) {
       return driveScale;
     }
@@ -36,8 +35,7 @@ public final class TerrainDriveLaws {
       return 0.0;
     }
 
-    double normalizedLoad = clamp(tractionState.forCorner(corner).normalizedLoad(), 0.7, 1.25);
-    double steerScale = clamp(0.75 + (0.25 * normalizedLoad), 0.75, 1.1);
+    double steerScale = 1.0;
     if (contactSample == null) {
       return steerScale;
     }

@@ -14,7 +14,7 @@ public final class HalSimSensorFrameApplicator implements SensorFrameApplicator 
 
   @Override
   public void apply(SensorFrame frame) {
-    if (frame.header().stepId() <= lastAppliedStep) {
+    if (frame.header().stepId() < lastAppliedStep) {
       return;
     }
     for (EncoderInput encoder : frame.encoders()) {

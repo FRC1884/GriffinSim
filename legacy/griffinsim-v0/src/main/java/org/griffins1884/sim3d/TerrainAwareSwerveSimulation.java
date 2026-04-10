@@ -20,11 +20,15 @@ import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
  */
 public final class TerrainAwareSwerveSimulation implements CommandableDriveSimulationAdapter {
   private static final double GRAVITY_MPS2 = 9.80665;
-  private static final double SUPPORTED_ATTITUDE_TIME_CONSTANT_SEC = 0.02;
+  private static final double SUPPORTED_ATTITUDE_TIME_CONSTANT_SEC = 0.05;
+  private static final double RECONTACT_ATTITUDE_TIME_CONSTANT_SEC = 0.08;
   private static final double AIRBORNE_ATTITUDE_DAMPING = 2.0;
   private static final double LAUNCH_VERTICAL_SPEED_THRESHOLD_MPS = 0.35;
   private static final double LAUNCH_SEPARATION_MARGIN_METERS = 0.01;
+  private static final double MEANINGFUL_AIRBORNE_GAP_METERS = 0.01;
+  private static final double MAX_SUPPORTED_UPWARD_VELOCITY_MPS = 0.15;
   private static final double SUPPORT_CONTACT_TOLERANCE_METERS = 0.005;
+  private static final double SUPPORT_FACTOR_FADE_METERS = 0.02;
 
   private final SwerveDriveBackend driveBackend;
   private final TerrainModel terrainModel;
@@ -265,7 +269,9 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
     Translation3d fieldVelocity;
     Translation3d fieldAcceleration = new Translation3d();
     if (cachedSample != null && Double.isFinite(lastSampleTimestampSec)) {
-      double dt = now - lastSampleTimestampSec;
+      double dt =
+          resolveDtSeconds(
+              now, pose2d, robotRelativeChassisSpeeds, fieldRelativeChassisSpeeds);
       if (dt > 1e-5) {
         double supportVerticalVelocity =
             cachedSupportPlaneSample == null
@@ -335,6 +341,69 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
     return cachedChassisState;
   }
 
+  private double resolveDtSeconds(
+      double now,
+      Pose2d pose2d,
+      ChassisSpeeds robotRelativeChassisSpeeds,
+      ChassisSpeeds fieldRelativeChassisSpeeds) {
+    if (lastSamplePose2d != null) {
+      double planarDeltaMeters =
+          pose2d.getTranslation().getDistance(lastSamplePose2d.getTranslation());
+      double averageLinearSpeedMps =
+          averageLinearSpeedMetersPerSecond(fieldRelativeChassisSpeeds, lastFieldRelativeSpeeds);
+      if (planarDeltaMeters > 1e-6 && averageLinearSpeedMps > 1e-6) {
+        double kinematicDt = planarDeltaMeters / averageLinearSpeedMps;
+        if (kinematicDt > 1e-5 && kinematicDt <= 0.1) {
+          return kinematicDt;
+        }
+      }
+
+      double headingDeltaRad =
+          Math.abs(pose2d.getRotation().minus(lastSamplePose2d.getRotation()).getRadians());
+      double averageOmegaRadPerSec =
+          averageOmegaRadiansPerSecond(robotRelativeChassisSpeeds, lastRobotRelativeSpeeds);
+      if (headingDeltaRad > 1e-6 && averageOmegaRadPerSec > 1e-6) {
+        double rotationalDt = headingDeltaRad / averageOmegaRadPerSec;
+        if (rotationalDt > 1e-5 && rotationalDt <= 0.1) {
+          return rotationalDt;
+        }
+      }
+    }
+
+    return now - lastSampleTimestampSec;
+  }
+
+  private static double averageLinearSpeedMetersPerSecond(
+      ChassisSpeeds current, ChassisSpeeds previous) {
+    if (current == null && previous == null) {
+      return 0.0;
+    }
+    if (current == null) {
+      return Math.hypot(previous.vxMetersPerSecond, previous.vyMetersPerSecond);
+    }
+    if (previous == null) {
+      return Math.hypot(current.vxMetersPerSecond, current.vyMetersPerSecond);
+    }
+    return 0.5
+        * (Math.hypot(current.vxMetersPerSecond, current.vyMetersPerSecond)
+            + Math.hypot(previous.vxMetersPerSecond, previous.vyMetersPerSecond));
+  }
+
+  private static double averageOmegaRadiansPerSecond(
+      ChassisSpeeds current, ChassisSpeeds previous) {
+    if (current == null && previous == null) {
+      return 0.0;
+    }
+    if (current == null) {
+      return Math.abs(previous.omegaRadiansPerSecond);
+    }
+    if (previous == null) {
+      return Math.abs(current.omegaRadiansPerSecond);
+    }
+    return 0.5
+        * (Math.abs(current.omegaRadiansPerSecond) + Math.abs(previous.omegaRadiansPerSecond));
+  }
+
   private static boolean samePose(Pose2d first, Pose2d second) {
     if (first == second) {
       return true;
@@ -384,6 +453,7 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
       double supportVerticalVelocity,
       double previousBodyVerticalVelocity,
       double dt) {
+    boolean recontactedThisStep = false;
     if (bodySupported
         && previousBodyVerticalVelocity > LAUNCH_VERTICAL_SPEED_THRESHOLD_MPS
         && supportVerticalVelocity + LAUNCH_SEPARATION_MARGIN_METERS / dt < previousBodyVerticalVelocity) {
@@ -398,28 +468,42 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
       if (bodyHeightMeters <= supportPlaneSample.heightMeters()) {
         bodySupported = true;
         bodyHeightMeters = supportPlaneSample.heightMeters();
-        bodyVerticalVelocityMps = supportVerticalVelocity;
+        bodyVerticalVelocityMps = limitSupportedVerticalVelocity(supportVerticalVelocity);
+        recontactedThisStep = true;
       }
     }
 
     if (bodySupported) {
       bodyHeightMeters = supportPlaneSample.heightMeters();
-      bodyVerticalVelocityMps = supportVerticalVelocity;
-      followSupportedAttitude(supportPlaneSample, dt);
+      bodyVerticalVelocityMps = limitSupportedVerticalVelocity(supportVerticalVelocity);
+      followSupportedAttitude(
+          supportPlaneSample,
+          dt,
+          recontactedThisStep
+              ? RECONTACT_ATTITUDE_TIME_CONSTANT_SEC
+              : SUPPORTED_ATTITUDE_TIME_CONSTANT_SEC);
       return;
     }
 
     followAirborneAttitude(dt);
   }
 
-  private void followSupportedAttitude(SupportPlaneSample supportPlaneSample, double dt) {
+  private void followSupportedAttitude(
+      SupportPlaneSample supportPlaneSample, double dt, double timeConstantSeconds) {
     double previousRoll = bodyRollRad;
     double previousPitch = bodyPitchRad;
-    double blend = 1.0 - Math.exp(-dt / SUPPORTED_ATTITUDE_TIME_CONSTANT_SEC);
+    double blend = 1.0 - Math.exp(-dt / timeConstantSeconds);
     bodyRollRad += (supportPlaneSample.rollRadians() - bodyRollRad) * blend;
     bodyPitchRad += (supportPlaneSample.pitchRadians() - bodyPitchRad) * blend;
     rollRateRadPerSec = (bodyRollRad - previousRoll) / dt;
     pitchRateRadPerSec = (bodyPitchRad - previousPitch) / dt;
+  }
+
+  private static double limitSupportedVerticalVelocity(double supportVerticalVelocity) {
+    if (!Double.isFinite(supportVerticalVelocity)) {
+      return 0.0;
+    }
+    return Math.min(supportVerticalVelocity, MAX_SUPPORTED_UPWARD_VELOCITY_MPS);
   }
 
   private void followAirborneAttitude(double dt) {
@@ -444,6 +528,39 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
     return bodySupported;
   }
 
+  public synchronized SupportDiagnostics getSupportDiagnostics() {
+    sampleChassisState();
+    double terrainHeightMeters = cachedSample == null ? Double.NaN : cachedSample.heightMeters();
+    double supportPlaneHeightMeters =
+        cachedSupportPlaneSample == null ? Double.NaN : cachedSupportPlaneSample.heightMeters();
+    int supportContactCount =
+        !bodySupported || cachedSupportPlaneSample == null
+            ? 0
+            : cachedSupportPlaneSample.supportedCornerCount();
+    double chassisZAboveTerrainMeters =
+        Double.isFinite(terrainHeightMeters) ? bodyHeightMeters - terrainHeightMeters : Double.NaN;
+    double bodyBottomToTerrainGapMeters =
+        Double.isFinite(supportPlaneHeightMeters)
+            ? bodyHeightMeters - supportPlaneHeightMeters
+            : Double.NaN;
+    boolean actualAirborne =
+        supportContactCount == 0
+            && Double.isFinite(bodyBottomToTerrainGapMeters)
+            && bodyBottomToTerrainGapMeters >= MEANINGFUL_AIRBORNE_GAP_METERS;
+    return new SupportDiagnostics(
+        bodySupported,
+        supportContactCount,
+        terrainHeightMeters,
+        supportPlaneHeightMeters,
+        chassisZAboveTerrainMeters,
+        bodyBottomToTerrainGapMeters,
+        cachedSupportPlaneSample != null && cachedSupportPlaneSample.frontLeftSupported(),
+        cachedSupportPlaneSample != null && cachedSupportPlaneSample.frontRightSupported(),
+        cachedSupportPlaneSample != null && cachedSupportPlaneSample.rearLeftSupported(),
+        cachedSupportPlaneSample != null && cachedSupportPlaneSample.rearRightSupported(),
+        actualAirborne);
+  }
+
   private SupportPlaneSample computeSupportPlaneSample(Pose2d robotPose, TerrainSample fallbackSample) {
     double halfLength = chassisFootprint.lengthMeters() * 0.5;
     double halfWidth = chassisFootprint.widthMeters() * 0.5;
@@ -464,14 +581,33 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
         solution.centerHeightMeters(),
         Math.atan(solution.leftSlopeMetersPerMeter()),
         -Math.atan(solution.forwardSlopeMetersPerMeter()),
-        Math.abs(solution.predictedHeightMeters(SwerveCorner.FRONT_LEFT) - cornerHeights[0].heightMeters())
-            <= SUPPORT_CONTACT_TOLERANCE_METERS,
-        Math.abs(solution.predictedHeightMeters(SwerveCorner.FRONT_RIGHT) - cornerHeights[1].heightMeters())
-            <= SUPPORT_CONTACT_TOLERANCE_METERS,
-        Math.abs(solution.predictedHeightMeters(SwerveCorner.REAR_LEFT) - cornerHeights[2].heightMeters())
-            <= SUPPORT_CONTACT_TOLERANCE_METERS,
-        Math.abs(solution.predictedHeightMeters(SwerveCorner.REAR_RIGHT) - cornerHeights[3].heightMeters())
-            <= SUPPORT_CONTACT_TOLERANCE_METERS);
+        supportFactorFor(
+            solution.predictedHeightMeters(SwerveCorner.FRONT_LEFT),
+            cornerHeights[0].heightMeters()),
+        supportFactorFor(
+            solution.predictedHeightMeters(SwerveCorner.FRONT_RIGHT),
+            cornerHeights[1].heightMeters()),
+        supportFactorFor(
+            solution.predictedHeightMeters(SwerveCorner.REAR_LEFT),
+            cornerHeights[2].heightMeters()),
+        supportFactorFor(
+            solution.predictedHeightMeters(SwerveCorner.REAR_RIGHT),
+            cornerHeights[3].heightMeters()));
+  }
+
+  private static double supportFactorFor(double predictedHeightMeters, double actualHeightMeters) {
+    double marginMeters = predictedHeightMeters - actualHeightMeters;
+    if (marginMeters >= -SUPPORT_CONTACT_TOLERANCE_METERS) {
+      return 1.0;
+    }
+    return clamp(
+        1.0 + ((marginMeters + SUPPORT_CONTACT_TOLERANCE_METERS) / SUPPORT_FACTOR_FADE_METERS),
+        0.0,
+        1.0);
+  }
+
+  private static double clamp(double value, double min, double max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   private CornerHeight sampleCornerHeight(
@@ -638,31 +774,67 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
       double heightMeters,
       double rollRadians,
       double pitchRadians,
-      boolean frontLeftSupported,
-      boolean frontRightSupported,
-      boolean rearLeftSupported,
-      boolean rearRightSupported) {
+      double frontLeftSupportFactor,
+      double frontRightSupportFactor,
+      double rearLeftSupportFactor,
+      double rearRightSupportFactor) {
     static SupportPlaneSample fromTerrainSample(TerrainSample terrainSample) {
       return new SupportPlaneSample(
           terrainSample.heightMeters(),
           terrainSample.rollRadians(),
           terrainSample.pitchRadians(),
-          true,
-          true,
-          true,
-          true);
+          1.0,
+          1.0,
+          1.0,
+          1.0);
     }
 
     boolean allCornersSupported() {
-      return frontLeftSupported && frontRightSupported && rearLeftSupported && rearRightSupported;
+      return frontLeftSupported()
+          && frontRightSupported()
+          && rearLeftSupported()
+          && rearRightSupported();
+    }
+
+    int supportedCornerCount() {
+      int count = 0;
+      if (frontLeftSupported()) {
+        count++;
+      }
+      if (frontRightSupported()) {
+        count++;
+      }
+      if (rearLeftSupported()) {
+        count++;
+      }
+      if (rearRightSupported()) {
+        count++;
+      }
+      return count;
+    }
+
+    boolean frontLeftSupported() {
+      return frontLeftSupportFactor >= 0.5;
+    }
+
+    boolean frontRightSupported() {
+      return frontRightSupportFactor >= 0.5;
+    }
+
+    boolean rearLeftSupported() {
+      return rearLeftSupportFactor >= 0.5;
+    }
+
+    boolean rearRightSupported() {
+      return rearRightSupportFactor >= 0.5;
     }
 
     double supportFactor(SwerveCorner corner) {
       return switch (corner) {
-        case FRONT_LEFT -> frontLeftSupported ? 1.0 : 0.0;
-        case FRONT_RIGHT -> frontRightSupported ? 1.0 : 0.0;
-        case REAR_LEFT -> rearLeftSupported ? 1.0 : 0.0;
-        case REAR_RIGHT -> rearRightSupported ? 1.0 : 0.0;
+        case FRONT_LEFT -> frontLeftSupportFactor;
+        case FRONT_RIGHT -> frontRightSupportFactor;
+        case REAR_LEFT -> rearLeftSupportFactor;
+        case REAR_RIGHT -> rearRightSupportFactor;
       };
     }
   }
@@ -717,4 +889,17 @@ public final class TerrainAwareSwerveSimulation implements CommandableDriveSimul
       return true;
     }
   }
+
+  public record SupportDiagnostics(
+      boolean bodySupported,
+      int supportContactCount,
+      double terrainHeightMeters,
+      double supportPlaneHeightMeters,
+      double chassisZAboveTerrainMeters,
+      double bodyBottomToTerrainGapMeters,
+      boolean frontLeftSupported,
+      boolean frontRightSupported,
+      boolean rearLeftSupported,
+      boolean rearRightSupported,
+      boolean actualAirborne) {}
 }

@@ -7,6 +7,7 @@ include ':modules:physics-core'
 include ':modules:sensor-emulation'
 include ':modules:rendering-spi'
 include ':apps:replay-diff'
+include ':apps:wpilib-harness'
 include ':compat:legacy-griffinsim'
 include ':compat:native-halsim-extension'
 
